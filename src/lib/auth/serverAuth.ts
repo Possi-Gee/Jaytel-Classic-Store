@@ -99,3 +99,14 @@ export async function requireAdmin(req: NextRequest): Promise<AuthenticatedUser 
   }
   return user;
 }
+
+/**
+ * Convenience helper to verify admin session and return isAdmin boolean
+ */
+export async function verifyAdminSession(req: NextRequest): Promise<{ isAdmin: boolean; user: AuthenticatedUser | null }> {
+  const user = await getAuthenticatedUser(req);
+  return {
+    isAdmin: !!user?.isAdmin,
+    user,
+  };
+}

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSignedUploadParams } from '@/lib/cloudinary';
-import { verifyAdminSession } from '@/lib/auth/serverAuth';
+import { requireAdmin } from '@/lib/auth/serverAuth';
+
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/admin/cloudinary-signature
@@ -10,9 +12,9 @@ import { verifyAdminSession } from '@/lib/auth/serverAuth';
 export async function GET(request: NextRequest) {
   try {
     // Verify admin session
-    const session = await verifyAdminSession(request);
-    if (!session.isAdmin) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const admin = await requireAdmin(request);
+    if (!admin) {
+      return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 401 });
     }
 
     const params = generateSignedUploadParams('jaytel-classic/products');
