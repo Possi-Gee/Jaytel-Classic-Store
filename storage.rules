@@ -1,0 +1,42 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    function isValidImage() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)') &&
+        request.resource.size < 5 * 1024 * 1024; // 5 MB max
+    }
+
+    // Product Images: Publicly readable, writeable only by Admin
+    match /products/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // Category banners & Store branding
+    match /branding/{imageId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidImage();
+      allow delete: if isAdmin();
+    }
+
+    // Customer profile avatars
+    match /users/{userId}/{avatarId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && request.auth.uid == userId && isValidImage();
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "name": "Jaytel Classic Store",
+  "short_name": "Jaytel",
+  "description": "Chic fashion, luxury beauty, girlish glamour, and stylish accessories with fast Ghana delivery and MoMo checkout.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf2f8",
+  "theme_color": "#ec4899",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["shopping", "fashion", "beauty", "lifestyle"],
+  "shortcuts": [
+    {
+      "name": "Shop All Chic Collections",
+      "short_name": "Shop",
+      "description": "Browse bags, dresses, and girlish glam",
+      "url": "/shop",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Track My Orders",
+      "short_name": "Orders",
+      "description": "View live delivery status",
+      "url": "/orders",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

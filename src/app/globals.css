@@ -1,0 +1,139 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 330 100% 99%;
+    --foreground: 335 40% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 335 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 335 40% 12%;
+
+    /* Jaytel Classic Signature Hot Pink */
+    --primary: 330 85% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Sweet Rose Gold / Soft Pink secondary */
+    --secondary: 335 100% 93%;
+    --secondary-foreground: 335 80% 28%;
+
+    --muted: 330 60% 97%;
+    --muted-foreground: 335 20% 45%;
+
+    --accent: 330 90% 94%;
+    --accent-foreground: 330 85% 40%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 330 60% 92%;
+    --input: 330 60% 92%;
+    --ring: 330 85% 55%;
+
+    --radius: 1rem;
+  }
+
+  .dark {
+    --background: 335 50% 6%;
+    --foreground: 330 30% 95%;
+
+    --card: 335 45% 9%;
+    --card-foreground: 330 30% 95%;
+
+    --popover: 335 45% 9%;
+    --popover-foreground: 330 30% 95%;
+
+    --primary: 330 85% 60%;
+    --primary-foreground: 335 50% 6%;
+
+    --secondary: 335 60% 18%;
+    --secondary-foreground: 330 80% 85%;
+
+    --muted: 335 40% 14%;
+    --muted-foreground: 330 20% 65%;
+
+    --accent: 330 60% 18%;
+    --accent-foreground: 330 80% 85%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 335 30% 20%;
+    --input: 335 30% 20%;
+    --ring: 330 85% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  html {
+    @apply scroll-smooth antialiased;
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+
+  body {
+    @apply bg-background text-foreground min-h-screen selection:bg-pink-200 selection:text-pink-900;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    overflow-x: hidden;
+    padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+    background-image: radial-gradient(at 0% 0%, rgba(253, 242, 248, 0.8) 0px, transparent 50%),
+                      radial-gradient(at 100% 100%, rgba(252, 231, 243, 0.6) 0px, transparent 50%);
+  }
+
+  @media (min-width: 1024px) {
+    body {
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+  }
+}
+
+/* Girlish scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(236, 72, 153, 0.3);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 72, 153, 0.6);
+}
+
+.touch-callout-none {
+  -webkit-touch-callout: none;
+}
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Girlish Glossy Glassmorphism */
+.glass {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-pink {
+  background: rgba(253, 242, 248, 0.85);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}

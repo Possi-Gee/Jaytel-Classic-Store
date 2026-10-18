@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.role == 'admin' ||
+        request.auth.token.admin == true
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Customer Profiles & Saved Addresses
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      // Customers cannot assign themselves the 'admin' role
+      allow create: if isOwner(userId) && (
+        !request.resource.data.keys().hasAny(['role']) ||
+        request.resource.data.role == 'customer'
+      );
+      // Customers cannot elevate their own role to 'admin'
+      allow update: if (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+      ) || isAdmin();
+      allow delete: if isAdmin();
+
+      // Saved addresses sub-collection
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Catalog: Products
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Catalog: Categories
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Store Settings & Delivery Zones
+    match /deliveryZones/{zoneId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /storeSettings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Coupons & Discounts
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Customer Orders - Strict Security
+    match /orders/{orderId} {
+      // Order reading: Only the customer who owns the order or an authorized admin
+      allow read: if (
+        isAuthenticated() && (
+          resource.data.customerId == request.auth.uid ||
+          (request.auth.token.email != null && resource.data.customerEmail == request.auth.token.email)
+        )
+      ) || isAdmin();
+
+      // Order creation: Customers can only submit orders with initial 'pending' payment status
+      // Customers CANNOT mark their own order as 'success' or 'paid'
+      allow create: if (
+        !request.resource.data.keys().hasAny(['paymentStatus']) ||
+        request.resource.data.paymentStatus == 'pending'
+      ) && (
+        !request.resource.data.keys().hasAny(['status']) ||
+        request.resource.data.status in ['pending_payment', 'confirmed']
+      );
+
+      // Order updates (status updates, payment confirmation): ONLY trusted server or admin
+      allow update: if isAdmin();
+      allow delete: if false; // Orders cannot be deleted
+    }
+
+    // Product Reviews
+    match /reviews/{reviewId} {
+      allow read: if resource.data.status == 'approved' || isAdmin();
+      allow create: if isAuthenticated() &&
+        request.resource.data.userId == request.auth.uid &&
+        request.resource.data.status == 'pending';
+      allow update, delete: if isAdmin();
+    }
+
+    // Audit Logs
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

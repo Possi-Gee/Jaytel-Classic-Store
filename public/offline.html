@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>You're Offline | Jaytel Classic Store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --pink-50:  #fdf2f8;
+      --pink-100: #fce7f3;
+      --pink-200: #fbcfe8;
+      --pink-400: #f472b6;
+      --pink-500: #ec4899;
+      --pink-600: #db2777;
+      --pink-700: #be185d;
+      --pink-900: #831843;
+      --rose-400: #fb7185;
+      --rose-500: #f43f5e;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-700: #334155;
+      --white:    #ffffff;
+    }
+
+    html {
+      height: 100%;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    body {
+      font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      min-height: 100vh;
+      background: var(--pink-50);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Decorative blobs */
+    body::before,
+    body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 520px;
+      height: 520px;
+      background: radial-gradient(circle, #f9a8d4 0%, #fbcfe8 60%, transparent 100%);
+      top: -160px;
+      right: -120px;
+    }
+    body::after {
+      width: 420px;
+      height: 420px;
+      background: radial-gradient(circle, #fda4af 0%, #fce7f3 60%, transparent 100%);
+      bottom: -130px;
+      left: -100px;
+    }
+
+    /* Floating hearts decoration */
+    .hearts {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .heart {
+      position: absolute;
+      opacity: 0;
+      animation: floatUp 8s ease-in infinite;
+      font-size: 18px;
+    }
+    .heart:nth-child(1)  { left: 8%;  animation-delay: 0s;   animation-duration: 9s;  font-size: 14px; }
+    .heart:nth-child(2)  { left: 20%; animation-delay: 1.5s; animation-duration: 7s;  font-size: 20px; }
+    .heart:nth-child(3)  { left: 35%; animation-delay: 3s;   animation-duration: 11s; font-size: 12px; }
+    .heart:nth-child(4)  { left: 52%; animation-delay: 0.8s; animation-duration: 8s;  font-size: 16px; }
+    .heart:nth-child(5)  { left: 68%; animation-delay: 2.2s; animation-duration: 9.5s;font-size: 22px; }
+    .heart:nth-child(6)  { left: 82%; animation-delay: 4s;   animation-duration: 7s;  font-size: 13px; }
+    .heart:nth-child(7)  { left: 90%; animation-delay: 1s;   animation-duration: 10s; font-size: 18px; }
+
+    @keyframes floatUp {
+      0%   { transform: translateY(100vh) scale(0.5) rotate(-10deg); opacity: 0; }
+      10%  { opacity: 0.6; }
+      90%  { opacity: 0.4; }
+      100% { transform: translateY(-120px) scale(1) rotate(12deg); opacity: 0; }
+    }
+
+    /* Card */
+    .card {
+      position: relative;
+      z-index: 1;
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(244, 114, 182, 0.22);
+      border-radius: 28px;
+      padding: 40px 32px 36px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow:
+        0 0 0 1px rgba(244,114,182,0.08),
+        0 4px 6px -1px rgba(219,39,119,0.08),
+        0 20px 60px -10px rgba(219,39,119,0.14);
+      animation: slideUp 0.55s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes slideUp {
+      from { transform: translateY(40px) scale(0.95); opacity: 0; }
+      to   { transform: translateY(0)    scale(1);    opacity: 1; }
+    }
+
+    /* Brand pill */
+    .brand-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: linear-gradient(135deg, #fce7f3, #fbcfe8);
+      border: 1px solid rgba(244,114,182,0.3);
+      border-radius: 9999px;
+      padding: 5px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--pink-700);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .brand-pill span.dot {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      background: var(--pink-500);
+      border-radius: 50%;
+    }
+
+    /* Signal icon with animation */
+    .icon-wrap {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 22px;
+      background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      box-shadow: 0 4px 16px rgba(219,39,119,0.15);
+    }
+    .icon-wrap svg {
+      width: 38px;
+      height: 38px;
+      color: var(--pink-600);
+      animation: pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);    opacity: 1;   }
+      50%       { transform: scale(0.88); opacity: 0.7; }
+    }
+
+    /* Sparkle badge on icon */
+    .icon-wrap::after {
+      content: '✨';
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      font-size: 18px;
+      animation: spin 4s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--slate-700);
+      line-height: 1.2;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+    h1 span.highlight {
+      background: linear-gradient(135deg, var(--pink-600), var(--rose-500));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--slate-500);
+      margin-bottom: 28px;
+      max-width: 320px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* Info chips */
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 28px;
+    }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--pink-50);
+      border: 1px solid var(--pink-200);
+      border-radius: 9999px;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--pink-700);
+    }
+    .chip-icon {
+      font-size: 13px;
+    }
+
+    /* Button */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, var(--pink-600) 0%, var(--rose-500) 100%);
+      color: white;
+      border: none;
+      border-radius: 16px;
+      padding: 14px 36px;
+      font-family: inherit;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      letter-spacing: 0.01em;
+      transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+      box-shadow: 0 4px 18px rgba(219,39,119,0.30);
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.12) 0%, transparent 100%);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(219,39,119,0.38);
+    }
+    .btn:active {
+      transform: translateY(0) scale(0.97);
+      box-shadow: 0 3px 12px rgba(219,39,119,0.25);
+    }
+    .btn svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+    }
+
+    /* Footer note */
+    .footer-note {
+      margin-top: 20px;
+      font-size: 12px;
+      color: var(--slate-400);
+      font-weight: 500;
+    }
+    .footer-note a {
+      color: var(--pink-600);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    .footer-note a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Floating hearts -->
+  <div class="hearts" aria-hidden="true">
+    <span class="heart">🩷</span>
+    <span class="heart">💕</span>
+    <span class="heart">🌸</span>
+    <span class="heart">💖</span>
+    <span class="heart">🩷</span>
+    <span class="heart">✨</span>
+    <span class="heart">💗</span>
+  </div>
+
+  <div class="card" role="main">
+
+    <!-- Brand pill -->
+    <div class="brand-pill">
+      <span class="dot"></span>
+      Jaytel Classic Store
+      <span class="dot"></span>
+    </div>
+
+    <!-- Icon -->
+    <div class="icon-wrap" aria-hidden="true">
+      <svg fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 4.243a9 9 0 01-12.728 0m0 0l2.829-2.829m-2.829 2.829L3 21m2.828-12.536a5 5 0 017.072 0m0 0l2.829-2.829M1 1l22 22"/>
+      </svg>
+    </div>
+
+    <!-- Heading -->
+    <h1>
+      Oops! <span class="highlight">No Signal, Babe 💅</span>
+    </h1>
+
+    <p>
+      Your internet connection seems to have wandered off. Check your Wi-Fi or mobile data, then try again — your cart items are safe and waiting for you!
+    </p>
+
+    <!-- Reassurance chips -->
+    <div class="chips" aria-label="What's safe while offline">
+      <span class="chip"><span class="chip-icon">🛍️</span> Cart saved locally</span>
+      <span class="chip"><span class="chip-icon">🩷</span> Wishlist intact</span>
+      <span class="chip"><span class="chip-icon">🔒</span> Data is secure</span>
+    </div>
+
+    <!-- CTA -->
+    <button class="btn" id="retry-btn" onclick="retryConnection()" aria-label="Try reconnecting">
+      <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Try Reconnecting
+    </button>
+
+    <p class="footer-note">
+      Back online? <a href="/" id="home-link">Return to Jaytel Classic ♥</a>
+    </p>
+  </div>
+
+  <script>
+    // Auto-detect reconnection and show feedback
+    function retryConnection() {
+      const btn = document.getElementById('retry-btn');
+      btn.textContent = 'Checking connection…';
+      btn.style.opacity = '0.75';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        if (navigator.onLine) {
+          btn.textContent = '✓ Back online! Redirecting…';
+          btn.style.background = 'linear-gradient(135deg, #16a34a, #15803d)';
+          setTimeout(() => { window.location.href = '/'; }, 800);
+        } else {
+          btn.innerHTML = `
+            <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="width:18px;height:18px">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+            Try Reconnecting`;
+          btn.style.opacity = '1';
+          btn.disabled = false;
+        }
+      }, 1500);
+    }
+
+    // Auto-reconnect watcher
+    window.addEventListener('online', () => {
+      document.getElementById('retry-btn').click();
+    });
+  </script>
+
+</body>
+</html>
