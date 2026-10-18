@@ -11,58 +11,89 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10 sm:space-y-16">
-      {/* Redesigned Luxury Hero Section - Compact on smaller screens */}
+      {/* Redesigned Luxury Hero Section - Compact on smaller screens with clear right-side image */}
       <section className="relative rounded-3xl sm:rounded-4xl overflow-hidden bg-gradient-to-br from-rose-950 via-pink-900 to-rose-900 text-white shadow-2xl border border-pink-500/20">
         {/* Subtle Ambient Glow Elements */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-500/30 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center p-5 sm:p-8 lg:p-14">
+        {/* Clear Right-Side Product Showcase Image on Smaller Screens (Mobile & Tablet) */}
+        <Link
+          href="/product/jaytel-royal-pink-quilted-crossbody-mini-bag"
+          className="absolute right-0 top-0 bottom-0 w-[42%] sm:w-[45%] lg:hidden overflow-hidden group block z-0"
+          aria-label="View Jaytel Royal Pink Quilted Crossbody"
+        >
+          <Image
+            src="https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80"
+            alt="Jaytel Royal Pink Quilted Crossbody Mini Bag"
+            fill
+            priority
+            sizes="(max-width: 1024px) 50vw, 400px"
+            className="object-cover object-center group-hover:scale-105 transition-transform duration-500"
+          />
+          {/* Seamless gradient fade into the burgundy hero background */}
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-950 via-rose-950/25 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-t from-rose-950/80 via-transparent to-black/30 pointer-events-none" />
+
+          {/* Floating Mobile Tags */}
+          <div className="absolute top-2.5 right-2.5">
+            <span className="px-2 py-0.5 rounded-full bg-pink-500 text-white text-[9px] font-black tracking-wider uppercase shadow-md flex items-center gap-1">
+              <Sparkles className="w-2.5 h-2.5" />
+              <span>Trending</span>
+            </span>
+          </div>
+
+          <div className="absolute bottom-2.5 right-2.5 left-2 flex items-center justify-end">
+            <span className="px-2 py-0.5 rounded-full bg-slate-900/80 backdrop-blur-md text-pink-200 border border-white/20 text-[9px] font-mono font-bold shadow-md">
+              GH₵ 320
+            </span>
+          </div>
+        </Link>
+
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center p-5 sm:p-8 lg:p-14">
           {/* Left Column: Editorial Headline & Single Strong Action */}
-          <div className="lg:col-span-7 space-y-4 sm:space-y-6">
+          <div className="max-w-[62%] sm:max-w-[58%] lg:max-w-none lg:col-span-7 space-y-3 sm:space-y-5">
             {/* Luxury Boutique Badge */}
-            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] sm:text-xs font-bold text-pink-200 shadow-sm">
-              <Crown className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
-              <span>Accra's Premier Girlish Boutique</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />
-              <span className="text-white/80 font-normal">New 2026 Season</span>
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[9px] sm:text-xs font-bold text-pink-200 shadow-sm">
+              <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300 animate-pulse" />
+              <span>Accra's Premier Boutique</span>
             </div>
 
             {/* Main Headline & One Short Description */}
-            <div className="space-y-2">
-              <h1 className="text-2xl sm:text-4xl lg:text-6xl font-black tracking-tight leading-[1.15] text-white">
+            <div className="space-y-1 sm:space-y-2">
+              <h1 className="text-xl sm:text-3xl lg:text-6xl font-black tracking-tight leading-[1.12] text-white">
                 Unleash Your <br />
                 <span className="bg-gradient-to-r from-pink-300 via-rose-200 to-pink-400 bg-clip-text text-transparent drop-shadow-sm">
                   Girlish Glamour.
                 </span>
               </h1>
-              <p className="text-xs sm:text-base text-pink-100/90 leading-relaxed font-normal max-w-xl">
-                Curated statement mini bags, lustrous gowns, and viral glam pieces — hand-delivered across Ghana with instant Mobile Money checkout.
+              <p className="text-[11px] sm:text-sm lg:text-base text-pink-100/90 leading-relaxed font-normal line-clamp-2 sm:line-clamp-none max-w-xl">
+                Curated statement bags, satin gowns & viral glam pieces — hand-delivered across Ghana with instant MoMo checkout.
               </p>
             </div>
 
             {/* Single Strong Shopping CTA Button */}
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center gap-3 pt-0.5 sm:pt-1">
               <Link
                 href="/shop"
-                className="inline-flex items-center justify-center px-7 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black text-xs sm:text-sm shadow-pink hover:shadow-pink-lg transition-all active:scale-95 gap-2 min-h-tap"
+                className="inline-flex items-center justify-center px-5 sm:px-7 py-2.5 sm:py-3.5 rounded-xl sm:rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black text-xs sm:text-sm shadow-pink hover:shadow-pink-lg transition-all active:scale-95 gap-1.5 sm:gap-2 min-h-tap"
               >
-                <span>Shop All Glamour</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>Shop Glamour</span>
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </Link>
 
               {/* Secondary Button shown only on desktop */}
               <Link
                 href="/shop?category=luxe-handbags-mini-bags"
-                className="hidden sm:inline-flex items-center justify-center px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 gap-2 min-h-tap"
+                className="hidden sm:inline-flex items-center justify-center px-6 py-3.5 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 gap-2 min-h-tap"
               >
                 <ShoppingBag className="w-4 h-4 text-pink-300" />
                 <span>Explore Luxe Bags</span>
               </Link>
             </div>
 
-            {/* Trust Highlights Strip - shown on sm+ screens */}
-            <div className="pt-3 border-t border-white/10 hidden sm:grid grid-cols-3 gap-2 sm:gap-4 max-w-lg">
+            {/* Trust Highlights Strip - shown on md+ screens */}
+            <div className="pt-3 border-t border-white/10 hidden md:grid grid-cols-3 gap-2 sm:gap-4 max-w-lg">
               <div className="flex items-center gap-2 text-left">
                 <div className="w-7 h-7 rounded-full bg-pink-500/20 border border-pink-400/30 flex items-center justify-center shrink-0 text-pink-300">
                   <Truck className="w-3.5 h-3.5" />
