@@ -11,57 +11,58 @@ export default function HomePage() {
 
   return (
     <div className="space-y-10 sm:space-y-16">
-      {/* Redesigned Luxury Hero Section */}
-      <section className="relative rounded-4xl overflow-hidden bg-gradient-to-br from-rose-950 via-pink-900 to-rose-900 text-white shadow-2xl border border-pink-500/20">
+      {/* Redesigned Luxury Hero Section - Compact on smaller screens */}
+      <section className="relative rounded-3xl sm:rounded-4xl overflow-hidden bg-gradient-to-br from-rose-950 via-pink-900 to-rose-900 text-white shadow-2xl border border-pink-500/20">
         {/* Subtle Ambient Glow Elements */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-500/30 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center p-6 sm:p-10 lg:p-14">
-          {/* Left Column: Editorial Headline & Value Propositions */}
-          <div className="lg:col-span-7 space-y-6">
+        <div className="relative grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center p-5 sm:p-8 lg:p-14">
+          {/* Left Column: Editorial Headline & Single Strong Action */}
+          <div className="lg:col-span-7 space-y-4 sm:space-y-6">
             {/* Luxury Boutique Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs font-bold text-pink-200 shadow-sm">
-              <Crown className="w-4 h-4 text-amber-300 animate-pulse" />
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] sm:text-xs font-bold text-pink-200 shadow-sm">
+              <Crown className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
               <span>Accra's Premier Girlish Boutique</span>
               <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />
               <span className="text-white/80 font-normal">New 2026 Season</span>
             </div>
 
-            {/* Headline */}
+            {/* Main Headline & One Short Description */}
             <div className="space-y-2">
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white">
+              <h1 className="text-2xl sm:text-4xl lg:text-6xl font-black tracking-tight leading-[1.15] text-white">
                 Unleash Your <br />
                 <span className="bg-gradient-to-r from-pink-300 via-rose-200 to-pink-400 bg-clip-text text-transparent drop-shadow-sm">
                   Girlish Glamour.
                 </span>
               </h1>
-              <p className="text-xs sm:text-base text-pink-100/90 leading-relaxed font-normal max-w-xl pt-2">
-                Curated statement mini bags, lustrous satin gowns, viral plumping glosses, and dainty sparkling jewels. Hand-delivered across Ghana with instant Mobile Money checkout.
+              <p className="text-xs sm:text-base text-pink-100/90 leading-relaxed font-normal max-w-xl">
+                Curated statement mini bags, lustrous gowns, and viral glam pieces — hand-delivered across Ghana with instant Mobile Money checkout.
               </p>
             </div>
 
-            {/* CTA Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
+            {/* Single Strong Shopping CTA Button */}
+            <div className="flex flex-wrap items-center gap-3 pt-1">
               <Link
                 href="/shop"
-                className="inline-flex items-center justify-center px-7 py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black text-xs sm:text-sm shadow-pink hover:shadow-pink-lg transition-all active:scale-95 gap-2 min-h-tap"
+                className="inline-flex items-center justify-center px-7 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-400 hover:to-rose-400 text-white font-black text-xs sm:text-sm shadow-pink hover:shadow-pink-lg transition-all active:scale-95 gap-2 min-h-tap"
               >
                 <span>Shop All Glamour</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
 
+              {/* Secondary Button shown only on desktop */}
               <Link
                 href="/shop?category=luxe-handbags-mini-bags"
-                className="inline-flex items-center justify-center px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 gap-2 min-h-tap"
+                className="hidden sm:inline-flex items-center justify-center px-6 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm border border-white/20 backdrop-blur-md transition-all active:scale-95 gap-2 min-h-tap"
               >
                 <ShoppingBag className="w-4 h-4 text-pink-300" />
                 <span>Explore Luxe Bags</span>
               </Link>
             </div>
 
-            {/* Trust Highlights Strip */}
-            <div className="pt-4 border-t border-white/10 grid grid-cols-3 gap-2 sm:gap-4 max-w-lg">
+            {/* Trust Highlights Strip - shown on sm+ screens */}
+            <div className="pt-3 border-t border-white/10 hidden sm:grid grid-cols-3 gap-2 sm:gap-4 max-w-lg">
               <div className="flex items-center gap-2 text-left">
                 <div className="w-7 h-7 rounded-full bg-pink-500/20 border border-pink-400/30 flex items-center justify-center shrink-0 text-pink-300">
                   <Truck className="w-3.5 h-3.5" />
@@ -94,8 +95,8 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Column: Featured Luxury Product Showcase Card */}
-          <div className="lg:col-span-5 relative flex justify-center lg:justify-end">
+          {/* Right Column: Featured Luxury Product Showcase Card - shown on desktop */}
+          <div className="hidden lg:flex lg:col-span-5 relative justify-center lg:justify-end">
             <div className="relative w-full max-w-sm">
               {/* Product Card Container */}
               <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-white/15 to-white/5 border border-white/25 p-3.5 shadow-2xl backdrop-blur-xl group">
