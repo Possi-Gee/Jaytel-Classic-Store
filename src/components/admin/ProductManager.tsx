@@ -765,59 +765,92 @@ export default function ProductManager({ categories, onProductsChange }: Product
                     {variants.map((v, idx) => (
                       <div
                         key={idx}
-                        className="p-3 bg-white rounded-2xl border border-pink-200 flex flex-col sm:flex-row sm:items-center gap-2 shadow-xs"
+                        className="p-3 bg-white rounded-2xl border border-pink-200 shadow-xs space-y-2"
                       >
-                        <div className="flex-1">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Color / Option Name
-                          </label>
-                          <input
-                            type="text"
-                            required
-                            placeholder="e.g. Barbie Hot Pink, Pastel Blush, Jet Black"
-                            value={v.name}
-                            onChange={(e) => handleUpdateVariant(idx, 'name', e.target.value)}
-                            className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-slate-900"
-                          />
+                        {/* Row 1: Color name + delete */}
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1">
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Color / Option Name
+                            </label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="e.g. Barbie Hot Pink, Pastel Blush, Jet Black"
+                              value={v.name}
+                              onChange={(e) => handleUpdateVariant(idx, 'name', e.target.value)}
+                              className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-slate-900"
+                            />
+                          </div>
+                          <div className="flex items-end pb-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVariant(idx)}
+                              className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
+                              title="Remove color option"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="w-full sm:w-28">
-                          <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Price (GH₵)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            placeholder={price || '320'}
-                            value={v.price}
-                            onChange={(e) => handleUpdateVariant(idx, 'price', e.target.value)}
-                            className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-pink-600"
-                          />
+                        {/* Row 2: Price / Sale Price / Stock */}
+                        <div className="grid grid-cols-3 gap-2">
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Price (GH₵) *
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder={price || '320'}
+                              value={v.price}
+                              onChange={(e) => handleUpdateVariant(idx, 'price', e.target.value)}
+                              className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-slate-800"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Sale Price (GH₵)
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              placeholder="Optional"
+                              value={v.salePrice || ''}
+                              onChange={(e) => handleUpdateVariant(idx, 'salePrice', e.target.value)}
+                              className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-pink-600"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
+                              Stock
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              placeholder="5"
+                              value={v.stock}
+                              onChange={(e) => handleUpdateVariant(idx, 'stock', e.target.value)}
+                              className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-slate-800"
+                            />
+                          </div>
                         </div>
 
-                        <div className="w-full sm:w-20">
+                        {/* Row 3: Optional variant-specific image */}
+                        <div>
                           <label className="text-[10px] font-bold text-slate-500 block mb-0.5">
-                            Stock
+                            Color Image URL (Optional — shows when this color is selected)
                           </label>
                           <input
-                            type="number"
-                            min="0"
-                            placeholder="5"
-                            value={v.stock}
-                            onChange={(e) => handleUpdateVariant(idx, 'stock', e.target.value)}
-                            className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs font-bold text-slate-800"
+                            type="url"
+                            placeholder="https://... paste image URL for this specific color"
+                            value={v.image || ''}
+                            onChange={(e) => handleUpdateVariant(idx, 'image', e.target.value)}
+                            className="w-full p-2 bg-pink-50/30 border border-pink-100 rounded-xl text-xs text-slate-700"
                           />
-                        </div>
-
-                        <div className="flex items-end">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveVariant(idx)}
-                            className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors"
-                            title="Remove color option"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
                         </div>
                       </div>
                     ))}

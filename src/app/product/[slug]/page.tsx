@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,43 +17,111 @@ import {
   Minus,
   Share2,
   Sparkles,
+  Loader2,
 } from 'lucide-react';
 import { mockProducts } from '@/data/mockData';
 import { formatGHS } from '@/lib/utils';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import ProductCard from '@/components/product/ProductCard';
+import { Product } from '@/types';
 
 export default function ProductDetailPage() {
   const params = useParams();
   const router = useRouter();
   const slug = params?.slug as string;
 
-  const product = mockProducts.find((p) => p.slug === slug) || mockProducts[0];
+  const [product, setProduct] = useState<Product | null>(null);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0]);
+  const [selectedVariant, setSelectedVariant] = useState<any>(undefined);
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
 
   const { addToCart, setIsCartOpen } = useCart();
   const { isInWishlist, toggleWishlist } = useWishlist();
 
-  const isFavorited = isInWishlist(product.id);
-  const currentPrice = selectedVariant?.salePrice ?? selectedVariant?.price ?? product.salePrice ?? product.price;
-  const originalPrice = selectedVariant?.price ?? product.price;
+  // Fetch all products from API (includes admin-posted ones)
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch('/api/admin/products');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && Array.isArray(data.products)) {
+            setAllProducts(data.products);
+            return data.products;
+          }
+        }
+      } catch {
+        // fallback to mockProducts
+      }
+      setAllProducts(mockProducts);
+      return mockProducts;
+    };
+
+    fetchProducts().then((products) => {
+      const found = products.find((p: Product) => p.slug === slug) || null;
+      setProduct(found);
+      if (found?.variants && found.variants.length > 0) {
+        setSelectedVariant(found.variants[0] as any);
+      }
+      setLoading(false);
+    });
+  }, [slug]);
+
+  // When variant changes — if it has its own image, switch to it
+  useEffect(() => {
+    if (!selectedVariant || !product) return;
+    const v = selectedVariant as any;
+    if (v.image) {
+      // Find or insert the variant image in the gallery
+      const variantImgIndex = product.images.indexOf(v.image);
+      if (variantImgIndex >= 0) {
+        setSelectedImageIndex(variantImgIndex);
+      } else {
+        setSelectedImageIndex(0);
+      }
+    }
+  }, [selectedVariant, product]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="w-8 h-8 text-pink-400 animate-spin" />
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="text-center py-24 space-y-4">
+        <p className="text-2xl font-black text-slate-700">Product not found 😔</p>
+        <Link href="/shop" className="text-pink-600 underline text-sm font-bold">
+          Back to Shop
+        </Link>
+      </div>
+    );
+  }
+
+  const sv = selectedVariant as any;
+  const currentPrice = sv?.salePrice ?? sv?.price ?? product.salePrice ?? product.price;
+  const originalPrice = sv?.price ?? product.price;
   const discountPercent =
     currentPrice < originalPrice ? Math.round(((originalPrice - currentPrice) / originalPrice) * 100) : 0;
-  const maxStock = selectedVariant ? selectedVariant.stock : product.stock;
+  const maxStock = sv ? sv.stock : product.stock;
+  const isFavorited = isInWishlist(product.id);
 
   const handleAddToCart = () => {
-    addToCart(product, quantity, selectedVariant);
+    addToCart(product, quantity, selectedVariant as any);
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 3000);
   };
 
   const handleBuyNow = () => {
-    addToCart(product, quantity, selectedVariant);
+    addToCart(product, quantity, selectedVariant as any);
     router.push('/checkout');
   };
 
@@ -72,7 +140,15 @@ export default function ProductDetailPage() {
     }
   };
 
-  const relatedProducts = mockProducts.filter(
+  // Build display image list — if selected variant has its own image and it's not already in gallery, prepend it
+  const displayImages = (() => {
+    if (sv?.image && !product.images.includes(sv.image)) {
+      return [sv.image, ...product.images];
+    }
+    return product.images;
+  })();
+
+  const relatedProducts = allProducts.filter(
     (p) => p.categoryId === product.categoryId && p.id !== product.id
   );
 
@@ -104,8 +180,8 @@ export default function ProductDetailPage() {
         <div className="space-y-4">
           <div className="relative aspect-square w-full rounded-4xl overflow-hidden bg-pink-50/50 border border-pink-100 shadow-soft">
             <Image
-              src={product.images[selectedImageIndex] || product.images[0]}
-              alt={product.title}
+              src={displayImages[selectedImageIndex] || displayImages[0]}
+              alt={sv ? `${product.title} — ${sv.name}` : product.title}
               fill
               priority
               sizes="(max-width: 1024px) 100vw, 50vw"
@@ -116,12 +192,18 @@ export default function ProductDetailPage() {
                 -{discountPercent}% OFF
               </span>
             )}
+            {/* Show selected color name badge on image */}
+            {sv && (
+              <span className="absolute bottom-4 left-4 px-3 py-1 bg-white/90 backdrop-blur-sm text-pink-800 font-black text-xs rounded-full border border-pink-200 shadow-xs">
+                {sv.name}
+              </span>
+            )}
           </div>
 
           {/* Thumbnails */}
-          {product.images.length > 1 && (
+          {displayImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {product.images.map((img, idx) => (
+              {displayImages.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
@@ -209,29 +291,57 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Variants */}
+          {/* ── COLOR / OPTION SELECTOR ── */}
           {product.variants && product.variants.length > 0 && (
             <div className="space-y-2">
               <label className="text-xs font-black text-slate-900 uppercase tracking-wider">
                 Select Option / Color:
               </label>
               <div className="grid grid-cols-2 gap-2">
-                {product.variants.map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => setSelectedVariant(v)}
-                    className={`p-3 rounded-2xl border text-left transition-all ${
-                      selectedVariant?.id === v.id
-                        ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500 text-pink-950 font-bold shadow-xs'
-                        : 'border-pink-100 bg-white text-slate-700 hover:border-pink-300'
-                    }`}
-                  >
-                    <div className="text-xs font-semibold">{v.name}</div>
-                    <div className="text-xs font-black text-pink-600 mt-0.5">
-                      {formatGHS(v.salePrice ?? v.price)}
-                    </div>
-                  </button>
-                ))}
+                {product.variants.map((v) => {
+                  const vp = v as any;
+                  const displayPrice = vp.salePrice ?? vp.price;
+                  const isSelected = (sv as any)?.id === vp.id;
+                  return (
+                    <button
+                      key={vp.id}
+                      onClick={() => setSelectedVariant(v as any)}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-pink-500 bg-pink-50 ring-2 ring-pink-500 text-pink-950 font-bold shadow-xs'
+                          : 'border-pink-100 bg-white text-slate-700 hover:border-pink-300 hover:bg-pink-50/40'
+                      }`}
+                    >
+                      {/* Color swatch dot if hex color */}
+                      <div className="flex items-center gap-2 mb-1">
+                        {vp.attributes?.hex && (
+                          <span
+                            className="w-3 h-3 rounded-full border border-white shadow-sm shrink-0"
+                            style={{ backgroundColor: vp.attributes.hex }}
+                          />
+                        )}
+                        <span className="text-xs font-semibold leading-tight">{vp.name}</span>
+                        {isSelected && <Check className="w-3 h-3 text-pink-600 ml-auto shrink-0" />}
+                      </div>
+                      <div className="text-xs font-black text-pink-600">
+                        {formatGHS(displayPrice)}
+                        {vp.salePrice && vp.salePrice < vp.price && (
+                          <span className="text-[10px] text-slate-400 line-through ml-1.5 font-normal">
+                            {formatGHS(vp.price)}
+                          </span>
+                        )}
+                      </div>
+                      {vp.stock <= 3 && vp.stock > 0 && (
+                        <div className="text-[10px] text-amber-600 font-bold mt-0.5">
+                          Only {vp.stock} left!
+                        </div>
+                      )}
+                      {vp.stock === 0 && (
+                        <div className="text-[10px] text-rose-600 font-bold mt-0.5">Sold out</div>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -310,7 +420,7 @@ export default function ProductDetailPage() {
           <div className="border-t border-pink-100 pt-5 space-y-3 text-xs text-slate-600">
             <div className="flex items-center gap-3">
               <Truck className="w-4 h-4 text-pink-600 shrink-0" />
-              <span>Express delivery across Accra & Tema. 1-3 days nationwide across Ghana.</span>
+              <span>Express delivery across Accra &amp; Tema. 1-3 days nationwide across Ghana.</span>
             </div>
             <div className="flex items-center gap-3">
               <ShieldCheck className="w-4 h-4 text-pink-600 shrink-0" />
@@ -328,14 +438,14 @@ export default function ProductDetailPage() {
       <section className="bg-white rounded-4xl border border-pink-100 p-6 sm:p-10 shadow-soft space-y-6">
         <div>
           <h2 className="text-base font-black text-slate-900 border-b border-pink-100 pb-3">
-            Product Glamour & Details
+            Product Glamour &amp; Details
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mt-4 whitespace-pre-line">
             {product.description}
           </p>
         </div>
 
-        {product.specifications && (
+        {product.specifications && Object.keys(product.specifications).length > 0 && (
           <div>
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
               Product Specifications
