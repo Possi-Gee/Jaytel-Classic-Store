@@ -17,7 +17,7 @@ interface CartContextType {
   removeFromCart: (cartItemId: string) => void;
   updateQuantity: (cartItemId: string, newQuantity: number) => void;
   clearCart: () => void;
-  applyCoupon: (code: string) => { success: boolean; message: string };
+  applyCoupon: (code: string) => Promise<{ success: boolean; message: string }>;
   removeCoupon: () => void;
   setSelectedDeliveryZoneId: (zoneId: string) => void;
   setIsCartOpen: (open: boolean) => void;
@@ -132,23 +132,41 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const total = Math.max(0, subtotal - discount + deliveryFee);
   const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
-  const applyCoupon = (code: string) => {
+  const applyCoupon = async (code: string): Promise<{ success: boolean; message: string }> => {
     const cleanCode = code.trim().toUpperCase();
-    const found = mockCoupons.find((c) => c.code === cleanCode && c.isActive);
-
-    if (!found) {
-      return { success: false, message: 'Invalid or expired coupon code' };
+    if (!cleanCode) {
+      return { success: false, message: 'Please enter a promo code' };
     }
 
-    if (found.minOrderAmount && subtotal < found.minOrderAmount) {
-      return {
-        success: false,
-        message: `This coupon requires a minimum subtotal of GH₵ ${found.minOrderAmount}`,
-      };
-    }
+    try {
+      const res = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cleanCode, subtotal }),
+      });
+      const data = await res.json();
+      if (data.valid && data.coupon) {
+        setAppliedCoupon(data.coupon);
+        return { success: true, message: data.message || `Promo code ${cleanCode} applied successfully!` };
+      }
+      return { success: false, message: data.message || 'Invalid or expired promo code' };
+    } catch {
+      // Offline fallback
+      const found = mockCoupons.find((c) => c.code === cleanCode && c.isActive);
+      if (!found) {
+        return { success: false, message: 'Invalid or expired coupon code' };
+      }
 
-    setAppliedCoupon(found);
-    return { success: true, message: `Coupon ${found.code} applied successfully!` };
+      if (found.minOrderAmount && subtotal < found.minOrderAmount) {
+        return {
+          success: false,
+          message: `This promo code requires a minimum order of GH₵ ${found.minOrderAmount}`,
+        };
+      }
+
+      setAppliedCoupon(found);
+      return { success: true, message: `Coupon ${found.code} applied successfully!` };
+    }
   };
 
   const removeCoupon = () => {

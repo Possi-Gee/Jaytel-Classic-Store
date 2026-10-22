@@ -45,24 +45,33 @@ export default function Footer() {
           {/* Brand Info */}
           <div className="col-span-2 md:col-span-1">
             <div className="flex items-center space-x-2.5 mb-3">
-              <div className="relative w-9 h-9 rounded-xl overflow-hidden bg-white border border-pink-300 shrink-0">
+              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-white border-2 border-pink-400 shrink-0 shadow-sm">
                 <Image src="/logo.png" alt="Jaytel Classic Store" fill className="object-cover" />
               </div>
-              <span className="font-extrabold text-white text-lg tracking-tight">
-                Jaytel <span className="text-pink-500">Classic</span>
-              </span>
+              <div>
+                <span className="font-extrabold text-white text-lg tracking-tight block leading-tight">
+                  Jaytel <span className="text-pink-500">Classic</span>
+                </span>
+                <span className="text-[10px] text-pink-300 font-semibold uppercase tracking-wider block">
+                  Quality & Affordable
+                </span>
+              </div>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Ghana's premier online boutique for feminine glamour, statement handbags, chic brunch outfits, glossy makeup, and sweet scents.
+              Ghana's trusted home of quality and affordable African prints, luxury lace, chic dresses, men & kids wear, shoes, bags, and modern kitchenware.
             </p>
             <div className="text-xs text-slate-400 space-y-1.5">
               <div className="flex items-center space-x-2">
                 <MapPin className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-                <span>East Legon / Osu, Accra, Ghana</span>
+                <span>East Legon / Accra, Ghana</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-                <span>+233 (0) 24 412 3456</span>
+                <span className="font-semibold text-pink-300">0243484468 / 0507080720</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Sparkles className="w-3.5 h-3.5 text-pink-400 shrink-0" />
+                <span>Instagram: @jaytel_classic_store</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Mail className="w-3.5 h-3.5 text-pink-400 shrink-0" />
@@ -81,23 +90,38 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=luxe-handbags-mini-bags" className="hover:text-pink-400 transition-colors">
-                  Luxe Handbags & Mini Bags
+                <Link href="/shop?category=african-prints" className="hover:text-pink-400 transition-colors">
+                  African Prints & Kente
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=chic-dresses-glam-sets" className="hover:text-pink-400 transition-colors">
-                  Chic Satin Dresses
+                <Link href="/shop?category=lace-fabrics" className="hover:text-pink-400 transition-colors">
+                  Lace & Luxury Fabrics
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=glossy-lip-kits-makeup" className="hover:text-pink-400 transition-colors">
-                  Plumping Lip Oils & Blushes
+                <Link href="/shop?category=ladies-wear" className="hover:text-pink-400 transition-colors">
+                  Ladies Wear & Dresses
                 </Link>
               </li>
               <li>
-                <Link href="/shop?category=sweet-perfumes-body-mists" className="hover:text-pink-400 transition-colors">
-                  Sweet Vanilla Perfumes
+                <Link href="/shop?category=shoes-bags" className="hover:text-pink-400 transition-colors">
+                  Shoes & Handbags
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop?category=kitchen-ware" className="hover:text-pink-400 transition-colors">
+                  Cookware & Kitchen Utensils
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop?category=cosmetics" className="hover:text-pink-400 transition-colors">
+                  Cosmetics & Beauty
+                </Link>
+              </li>
+              <li>
+                <Link href="/shop?category=sewing-accessories" className="hover:text-pink-400 transition-colors">
+                  Sewing Accessories
                 </Link>
               </li>
             </ul>

@@ -80,7 +80,7 @@ export default function PWAInstallPrompt() {
         className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 sm:max-w-sm z-50 bg-slate-950 text-white p-3.5 rounded-3xl shadow-pink-lg border border-pink-500/40 flex items-center justify-between gap-3 animate-slideUp"
       >
         <div className="flex items-center gap-3">
-          <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-white border border-pink-400 shrink-0">
+          <div className="relative w-11 h-11 rounded-full overflow-hidden bg-white border-2 border-pink-400 shrink-0 shadow-sm">
             <Image src="/logo.png" alt="Jaytel Classic App" fill className="object-cover" />
           </div>
           <div>

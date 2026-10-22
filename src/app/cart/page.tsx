@@ -27,10 +27,10 @@ export default function CartPage() {
   const [couponCode, setCouponCode] = useState('');
   const [couponMsg, setCouponMsg] = useState<{ text: string; isError: boolean } | null>(null);
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) return;
-    const res = applyCoupon(couponCode);
+    const res = await applyCoupon(couponCode);
     setCouponMsg({ text: res.message, isError: !res.success });
     if (res.success) setCouponCode('');
   };

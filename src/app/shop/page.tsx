@@ -1,30 +1,73 @@
 'use client';
 
-import React, { useState, useMemo, Suspense } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { SlidersHorizontal, X, Search, RotateCcw } from 'lucide-react';
 import ProductCard from '@/components/product/ProductCard';
 import { mockCategories, mockProducts } from '@/data/mockData';
+import { ProductCategory, Product } from '@/types';
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const initialCategory = searchParams.get('category') || 'all';
   const initialQuery = searchParams.get('q') || '';
 
+  const [categories, setCategories] = useState<ProductCategory[]>(mockCategories);
+  const [products, setProducts] = useState<Product[]>(mockProducts);
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory);
   const [searchQuery, setSearchQuery] = useState<string>(initialQuery);
   const [sortBy, setSortBy] = useState<'featured' | 'price-asc' | 'price-desc' | 'rating'>('featured');
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState<boolean>(false);
 
+  // Sync category from URL if changed
+  useEffect(() => {
+    const cat = searchParams.get('category');
+    if (cat) setSelectedCategory(cat);
+  }, [searchParams]);
+
+  // Fetch live categories and products
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [catRes, prodRes] = await Promise.all([
+          fetch('/api/categories'),
+          fetch('/api/admin/products'),
+        ]);
+
+        if (catRes.ok) {
+          const catData = await catRes.json();
+          if (catData.success && Array.isArray(catData.categories)) {
+            setCategories(catData.categories);
+          }
+        }
+
+        if (prodRes.ok) {
+          const prodData = await prodRes.json();
+          if (prodData.success && Array.isArray(prodData.products)) {
+            setProducts(prodData.products);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to fetch dynamic shop data:', e);
+      }
+    }
+    loadData();
+  }, []);
+
   // Filter products
   const filteredProducts = useMemo(() => {
-    return mockProducts
+    return products
       .filter((product) => {
         if (selectedCategory !== 'all') {
-          const catObj = mockCategories.find((c) => c.slug === selectedCategory);
-          if (catObj && product.categoryId !== catObj.id) {
-            return false;
+          const catObj = categories.find((c) => c.slug === selectedCategory);
+          if (catObj) {
+            const matchesId = product.categoryId === catObj.id;
+            const matchesName = product.category?.toLowerCase() === catObj.name.toLowerCase();
+            const matchesSlug = product.category?.toLowerCase() === catObj.slug.toLowerCase();
+            if (!matchesId && !matchesName && !matchesSlug) {
+              return false;
+            }
           }
         }
 
@@ -32,7 +75,7 @@ function ShopContent() {
           const q = searchQuery.toLowerCase();
           const matchesTitle = product.title.toLowerCase().includes(q);
           const matchesDesc = product.description.toLowerCase().includes(q);
-          const matchesCategory = product.category.toLowerCase().includes(q);
+          const matchesCategory = product.category?.toLowerCase().includes(q);
           if (!matchesTitle && !matchesDesc && !matchesCategory) return false;
         }
 
@@ -51,7 +94,7 @@ function ShopContent() {
         if (sortBy === 'rating') return (b.rating || 0) - (a.rating || 0);
         return 0;
       });
-  }, [selectedCategory, searchQuery, sortBy, inStockOnly]);
+  }, [categories, products, selectedCategory, searchQuery, sortBy, inStockOnly]);
 
   const resetFilters = () => {
     setSelectedCategory('all');
@@ -71,7 +114,7 @@ function ShopContent() {
           <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
             {selectedCategory === 'all'
               ? 'All Handcrafted Collections'
-              : mockCategories.find((c) => c.slug === selectedCategory)?.name || 'Collections'}
+              : categories.find((c) => c.slug === selectedCategory)?.name || 'Collections'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
             Showing {filteredProducts.length} authentic Ghanaian products
@@ -151,10 +194,15 @@ function ShopContent() {
                 }`}
               >
                 <span>All Categories</span>
-                <span className="text-[10px] text-slate-600">{mockProducts.length}</span>
+                <span className="text-[10px] text-slate-600">{products.length}</span>
               </button>
-              {mockCategories.map((c) => {
-                const count = mockProducts.filter((p) => p.categoryId === c.id).length;
+              {categories.map((c) => {
+                const count = products.filter(
+                  (p) =>
+                    p.categoryId === c.id ||
+                    p.category?.toLowerCase() === c.name.toLowerCase() ||
+                    p.category?.toLowerCase() === c.slug.toLowerCase()
+                ).length;
                 return (
                   <button
                     key={c.id}
@@ -196,7 +244,7 @@ function ShopContent() {
               <span className="text-xs text-slate-600">Active filters:</span>
               {selectedCategory !== 'all' && (
                 <span className="inline-flex items-center gap-1 text-[11px] bg-primary-100 text-primary-800 px-2.5 py-0.5 rounded-full font-medium">
-                  {mockCategories.find((c) => c.slug === selectedCategory)?.name}
+                  {categories.find((c) => c.slug === selectedCategory)?.name}
                   <button onClick={() => setSelectedCategory('all')} className="hover:text-primary-950">
                     <X className="w-3 h-3" />
                   </button>
@@ -282,7 +330,7 @@ function ShopContent() {
                   >
                     All Categories
                   </button>
-                  {mockCategories.map((c) => (
+                  {categories.map((c) => (
                     <button
                       key={c.id}
                       onClick={() => {

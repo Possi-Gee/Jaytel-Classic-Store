@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockProducts, mockDeliveryZones, mockCoupons } from '@/data/mockData';
+import { mockProducts, mockDeliveryZones } from '@/data/mockData';
 import { generateOrderNumber, isValidGhanaPhone } from '@/lib/utils';
 import { Order, OrderItem, OrderStatus, PaymentStatus } from '@/types';
 import {
@@ -10,6 +10,7 @@ import {
 } from '@/lib/orders/orderStore';
 import { getAuthenticatedUser } from '@/lib/auth/serverAuth';
 import { checkRateLimit } from '@/lib/security/rateLimit';
+import { validateCoupon } from '@/lib/coupons/couponStore';
 
 export async function POST(req: NextRequest) {
   const rateLimitErr = checkRateLimit(req, { limit: 20, windowSeconds: 60 });
@@ -130,17 +131,9 @@ export async function POST(req: NextRequest) {
     // 4. Server-side Coupon validation & recalculation
     let calculatedDiscount = 0;
     if (couponCode) {
-      const coupon = mockCoupons.find(
-        (c) => c.code.toUpperCase() === couponCode.trim().toUpperCase() && c.isActive
-      );
-      if (coupon) {
-        if (!coupon.minOrderAmount || calculatedSubtotal >= coupon.minOrderAmount) {
-          if (coupon.discountType === 'percentage') {
-            calculatedDiscount = (calculatedSubtotal * coupon.discountValue) / 100;
-          } else if (coupon.discountType === 'fixed') {
-            calculatedDiscount = coupon.discountValue;
-          }
-        }
+      const validation = await validateCoupon(couponCode, calculatedSubtotal);
+      if (validation.valid && validation.discountAmount !== undefined) {
+        calculatedDiscount = validation.discountAmount;
       }
     }
 

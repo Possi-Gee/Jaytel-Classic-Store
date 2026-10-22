@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/serverAuth';
 import { mockProducts } from '@/data/mockData';
-import { Product } from '@/types';
+import { Product, ProductVariant } from '@/types';
 
 export async function GET() {
   return NextResponse.json({
@@ -21,7 +21,21 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { title, category, categoryId, price, stock, description, images } = body;
+    const {
+      title,
+      category,
+      categoryId,
+      price,
+      salePrice,
+      stock,
+      description,
+      images,
+      variants,
+      featured,
+      bestSeller,
+      isNewArrival,
+      specifications,
+    } = body;
 
     if (!title || price === undefined) {
       return NextResponse.json(
@@ -30,16 +44,43 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Process gallery images (ensure at least 1 image)
+    const processedImages: string[] = Array.isArray(images) && images.length > 0
+      ? images.filter(Boolean)
+      : ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80'];
+
+    // Process variants (colors/options)
+    let processedVariants: ProductVariant[] | undefined = undefined;
+    if (Array.isArray(variants) && variants.length > 0) {
+      processedVariants = variants.map((v: any, index: number) => ({
+        id: v.id || `var-${Date.now()}-${index}`,
+        name: v.name || `Option ${index + 1}`,
+        price: Number(v.price) || Number(price),
+        salePrice: v.salePrice ? Number(v.salePrice) : undefined,
+        stock: Number(v.stock) >= 0 ? Number(v.stock) : 10,
+        attributes: v.attributes || { color: v.name },
+        image: v.image || undefined,
+      }));
+    }
+
     const newProd: Product = {
       id: `prod-${Date.now()}`,
-      title,
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      category: category || 'Accessories',
-      categoryId: categoryId || 'cat-accessories',
+      title: title.trim(),
+      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+      category: category || 'Shoes / Bags',
+      categoryId: categoryId || 'cat-shoes-bags',
       price: Number(price),
-      stock: Number(stock) || 10,
+      salePrice: salePrice ? Number(salePrice) : undefined,
+      stock: Number(stock) >= 0 ? Number(stock) : 10,
       description: description || 'Jaytel Classic premium glamorous piece.',
-      images: images && images.length > 0 ? images : ['https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80'],
+      images: processedImages,
+      variants: processedVariants,
+      featured: Boolean(featured),
+      bestSeller: Boolean(bestSeller),
+      isNewArrival: isNewArrival !== undefined ? Boolean(isNewArrival) : true,
+      specifications: specifications || {},
+      rating: 5.0,
+      reviewCount: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -69,7 +110,22 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { productId, stockDelta, price, title } = body;
+    const {
+      productId,
+      title,
+      category,
+      categoryId,
+      price,
+      salePrice,
+      stock,
+      stockDelta,
+      description,
+      images,
+      variants,
+      featured,
+      bestSeller,
+      isNewArrival,
+    } = body;
 
     if (!productId) {
       return NextResponse.json(
@@ -89,13 +145,46 @@ export async function PATCH(req: NextRequest) {
     if (stockDelta !== undefined) {
       prod.stock = Math.max(0, prod.stock + Number(stockDelta));
     }
+    if (stock !== undefined) {
+      prod.stock = Math.max(0, Number(stock));
+    }
     if (price !== undefined) {
       prod.price = Number(price);
     }
-    if (title !== undefined) {
-      prod.title = title;
-      prod.slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    if (salePrice !== undefined) {
+      prod.salePrice = salePrice ? Number(salePrice) : undefined;
     }
+    if (title !== undefined) {
+      prod.title = title.trim();
+      prod.slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    }
+    if (category !== undefined) {
+      prod.category = category;
+    }
+    if (categoryId !== undefined) {
+      prod.categoryId = categoryId;
+    }
+    if (description !== undefined) {
+      prod.description = description;
+    }
+    if (Array.isArray(images) && images.length > 0) {
+      prod.images = images.filter(Boolean);
+    }
+    if (Array.isArray(variants)) {
+      prod.variants = variants.map((v: any, index: number) => ({
+        id: v.id || `var-${Date.now()}-${index}`,
+        name: v.name || `Option ${index + 1}`,
+        price: Number(v.price) || prod.price,
+        salePrice: v.salePrice ? Number(v.salePrice) : undefined,
+        stock: Number(v.stock) >= 0 ? Number(v.stock) : 10,
+        attributes: v.attributes || { color: v.name },
+        image: v.image || undefined,
+      }));
+    }
+    if (featured !== undefined) prod.featured = Boolean(featured);
+    if (bestSeller !== undefined) prod.bestSeller = Boolean(bestSeller);
+    if (isNewArrival !== undefined) prod.isNewArrival = Boolean(isNewArrival);
+
     prod.updatedAt = new Date().toISOString();
 
     return NextResponse.json({
@@ -121,7 +210,7 @@ export async function DELETE(req: NextRequest) {
 
   try {
     const { searchParams } = new URL(req.url);
-    const productId = searchParams.get('id');
+    const productId = searchParams.get('id') || searchParams.get('productId');
 
     if (!productId) {
       return NextResponse.json(

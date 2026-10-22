@@ -31,10 +31,10 @@ export default function CartDrawer() {
 
   if (!isCartOpen) return null;
 
-  const handleApplyCoupon = (e: React.FormEvent) => {
+  const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode.trim()) return;
-    const res = applyCoupon(couponCode);
+    const res = await applyCoupon(couponCode);
     setCouponMsg({ text: res.message, isError: !res.success });
     if (res.success) {
       setCouponCode('');

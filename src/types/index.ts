@@ -64,6 +64,47 @@ export interface ProductCategory {
   icon?: string;
   productCount?: number;
   featured?: boolean;
+  isActive?: boolean;
+  order?: number;
+}
+
+export interface BannerSlide {
+  id: string;
+  badgeText: string;
+  title: string;
+  highlightText: string;
+  subtitle: string;
+  primaryBtnText: string;
+  primaryBtnLink: string;
+  secondaryBtnText?: string;
+  secondaryBtnLink?: string;
+  featuredCard: {
+    tag: string;
+    price: string;
+    categoryTag: string;
+    title: string;
+    rating: string;
+    reviewCount: string;
+    image: string;
+    link: string;
+    dispatchBadge?: string;
+    guaranteeBadge?: string;
+  };
+  bgGradient: string;
+  isActive: boolean;
+  order: number;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface StoreSettings {
+  storeName: string;
+  tagline: string;
+  contactPhones: string[];
+  socialHandle: string;
+  announcementText: string;
+  announcementCode: string;
+  bannerAutoScrollSeconds: number;
 }
 
 export interface ProductVariant {
@@ -74,6 +115,7 @@ export interface ProductVariant {
   salePrice?: number;
   stock: number;
   attributes: Record<string, string>; // { size: 'L', color: 'Navy Blue' }
+  image?: string;
 }
 
 export interface Product {
@@ -190,7 +232,9 @@ export interface Order {
 }
 
 export interface Coupon {
+  id?: string;
   code: string;
+  description?: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
   minOrderAmount?: number;

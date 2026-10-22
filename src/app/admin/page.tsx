@@ -1,54 +1,42 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import CloudinaryImageUploader from '@/components/admin/CloudinaryImageUploader';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
   TrendingUp,
-  Package,
-  ShoppingBag,
-  Users,
-  DollarSign,
-  Plus,
-  Edit,
-  Trash2,
-  CheckCircle,
-  Truck,
   ShieldAlert,
-  Search,
   Crown,
-  Heart,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { mockProducts, mockCategories, mockDeliveryZones, mockCoupons } from '@/data/mockData';
+import { mockProducts, mockCategories, mockDeliveryZones } from '@/data/mockData';
 import { formatGHS, formatDate } from '@/lib/utils';
-import { Order, OrderStatus, Product } from '@/types';
+import { Order, OrderStatus, Product, ProductCategory } from '@/types';
+import CategoryManager from '@/components/admin/CategoryManager';
+import BannerManager from '@/components/admin/BannerManager';
+import StoreSettingsManager from '@/components/admin/StoreSettingsManager';
+import ProductManager from '@/components/admin/ProductManager';
+import CouponManager from '@/components/admin/CouponManager';
+import DeliveryZoneManager from '@/components/admin/DeliveryZoneManager';
 
 export default function AdminDashboardPage() {
   const { user, isAdmin, switchDemoRole } = useAuth();
-  const [activeTab, setActiveTab] = useState<'overview' | 'orders' | 'products' | 'zones'>('overview');
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'orders' | 'products' | 'categories' | 'banners' | 'coupons' | 'zones' | 'settings'
+  >('overview');
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>(mockProducts);
+  const [categories, setCategories] = useState<ProductCategory[]>(mockCategories);
   const [loading, setLoading] = useState(true);
-
-  // New product modal state
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newCategory, setNewCategory] = useState(mockCategories[0].name);
-  const [newPrice, setNewPrice] = useState('');
-  const [newStock, setNewStock] = useState('10');
-  const [newDesc, setNewDesc] = useState('');
-  const [newImage, setNewImage] = useState('');
-  const [newImagePublicId, setNewImagePublicId] = useState('');
 
   useEffect(() => {
     async function loadData() {
       try {
-        const [ordersRes, prodsRes] = await Promise.all([
+        const [ordersRes, prodsRes, catsRes] = await Promise.all([
           fetch('/api/admin/orders'),
           fetch('/api/admin/products'),
+          fetch('/api/admin/categories'),
         ]);
 
         if (ordersRes.ok) {
@@ -62,6 +50,13 @@ export default function AdminDashboardPage() {
           const prodsData = await prodsRes.json();
           if (prodsData.success && Array.isArray(prodsData.products)) {
             setProducts(prodsData.products);
+          }
+        }
+
+        if (catsRes.ok) {
+          const catsData = await catsRes.json();
+          if (catsData.success && Array.isArray(catsData.categories) && catsData.categories.length > 0) {
+            setCategories(catsData.categories);
           }
         }
       } catch (err) {
@@ -89,60 +84,6 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleStockAdjust = async (productId: string, delta: number) => {
-    try {
-      const res = await fetch('/api/admin/products', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, stockDelta: delta }),
-      });
-      const data = await res.json();
-      if (data.success && data.product) {
-        setProducts((prev) => prev.map((p) => (p.id === productId ? data.product : p)));
-      }
-    } catch (err) {
-      console.error('Failed to adjust stock:', err);
-    }
-  };
-
-  const handleAddProductSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle || !newPrice) return;
-
-    const catObj = mockCategories.find((c) => c.name === newCategory) || mockCategories[0];
-    // Use uploaded Cloudinary image, or fall back to a placeholder
-    const imageUrl = newImage ||
-      'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80';
-
-    try {
-      const res = await fetch('/api/admin/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: newTitle,
-          category: newCategory,
-          categoryId: catObj.id,
-          price: parseFloat(newPrice),
-          stock: parseInt(newStock) || 10,
-          description: newDesc || 'Jaytel Classic premium glamorous piece.',
-          images: [imageUrl],
-          cloudinaryPublicId: newImagePublicId || null,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.product) {
-        setProducts([data.product, ...products]);
-        setShowAddProduct(false);
-        setNewTitle('');
-        setNewPrice('');
-        setNewDesc('');
-        setNewImage('');
-        setNewImagePublicId('');
-      }
-    } catch (err) {
-      console.error('Failed to add product:', err);
-    }
-  };
 
   if (!isAdmin) {
     return (
@@ -181,7 +122,7 @@ export default function AdminDashboardPage() {
       {/* Admin Header with Jaytel Logo */}
       <div className="bg-gradient-to-r from-pink-700 via-rose-600 to-pink-800 text-white rounded-4xl p-6 sm:p-8 shadow-pink-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-white border-2 border-pink-300 shadow-md shrink-0">
+          <div className="relative w-14 h-14 rounded-full overflow-hidden bg-white border-2 border-pink-300 shadow-md shrink-0">
             <Image src="/logo.png" alt="Jaytel Logo" fill className="object-cover" />
           </div>
           <div>
@@ -191,24 +132,33 @@ export default function AdminDashboardPage() {
             </div>
             <h1 className="text-xl sm:text-3xl font-black tracking-tight">Operations Dashboard</h1>
             <p className="text-xs text-pink-200 mt-0.5">
-              Fulfillment, sales receipts, and live inventory control
+              Live inventory, categories, hero banners, fulfillment, and settings
             </p>
           </div>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex bg-slate-950/40 p-1 rounded-2xl self-start sm:self-center overflow-x-auto backdrop-blur-md border border-white/20">
-          {(['overview', 'orders', 'products', 'zones'] as const).map((tab) => (
+        <div className="flex bg-slate-950/40 p-1 rounded-2xl self-start sm:self-center overflow-x-auto max-w-full backdrop-blur-md border border-white/20">
+          {[
+            { id: 'overview', label: 'Overview' },
+            { id: 'orders', label: 'Orders' },
+            { id: 'products', label: '🛍 Products' },
+            { id: 'coupons', label: '🏷 Promo Codes' },
+            { id: 'categories', label: 'Categories' },
+            { id: 'banners', label: 'Hero Banners' },
+            { id: 'zones', label: 'Zones' },
+            { id: 'settings', label: 'Settings' },
+          ].map((tab) => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
               className={`px-3.5 py-1.5 rounded-xl text-xs font-black capitalize transition-colors whitespace-nowrap ${
-                activeTab === tab
+                activeTab === tab.id
                   ? 'bg-white text-pink-700 shadow-sm'
                   : 'text-pink-100 hover:text-white'
               }`}
             >
-              {tab}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -389,193 +339,27 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Products Tab */}
+      {/* Products Tab — Full ProductManager */}
       {activeTab === 'products' && (
-        <div className="bg-white rounded-4xl border border-pink-100 p-6 shadow-soft space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-black text-base text-slate-900">Jaytel Catalog & Live Stock</h2>
-            <button
-              onClick={() => setShowAddProduct(true)}
-              className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-2xl text-xs font-bold flex items-center gap-1.5 shadow-pink transition-all"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add New Glam Piece</span>
-            </button>
-          </div>
-
-          {showAddProduct && (
-            <form
-              onSubmit={handleAddProductSubmit}
-              className="p-5 bg-pink-50/50 border border-pink-200 rounded-3xl space-y-4 text-xs"
-            >
-              <h3 className="font-black text-sm text-slate-900">Add New Jaytel Classic Item</h3>
-
-              {/* Product Image Upload */}
-              <CloudinaryImageUploader
-                label="Product Image"
-                currentImageUrl={newImage || undefined}
-                onUploadComplete={({ url, publicId }) => {
-                  setNewImage(url);
-                  setNewImagePublicId(publicId);
-                }}
-                onUploadError={(err) => console.error('Image upload failed:', err)}
-              />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Product Title</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Pink Pearl Mini Bag"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-pink-200 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Category</label>
-                  <select
-                    value={newCategory}
-                    onChange={(e) => setNewCategory(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-pink-200 rounded-xl"
-                  >
-                    {mockCategories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Price (GH₵)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    placeholder="250"
-                    value={newPrice}
-                    onChange={(e) => setNewPrice(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-pink-200 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1">Initial Stock</label>
-                  <input
-                    type="number"
-                    required
-                    value={newStock}
-                    onChange={(e) => setNewStock(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-pink-200 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              {/* Description */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe this glamorous piece…"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full p-2.5 bg-white border border-pink-200 rounded-xl resize-none"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold rounded-xl shadow-pink"
-                >
-                  Save to Boutique
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAddProduct(false);
-                    setNewImage('');
-                    setNewImagePublicId('');
-                  }}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 font-medium rounded-xl"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
-
-          <div className="space-y-3">
-            {products.map((p) => (
-              <div
-                key={p.id}
-                className="p-4 bg-pink-50/30 border border-pink-100 rounded-3xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="relative w-14 h-14 rounded-2xl overflow-hidden bg-white border border-pink-200 shrink-0">
-                    <Image src={p.images[0]} alt={p.title} fill className="object-cover" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm line-clamp-1">{p.title}</h4>
-                    <p className="text-[11px] text-pink-600 font-semibold">{p.category}</p>
-                    <p className="font-black text-pink-600 mt-0.5">
-                      {formatGHS(p.salePrice ?? p.price)}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-slate-700">Stock:</span>
-                  <button
-                    onClick={() => handleStockAdjust(p.id, -1)}
-                    className="w-7 h-7 bg-white border border-pink-200 text-pink-700 rounded-lg flex items-center justify-center font-bold"
-                  >
-                    -
-                  </button>
-                  <span
-                    className={`font-mono font-bold px-2.5 py-0.5 rounded-full ${
-                      p.stock < 10
-                        ? 'bg-rose-100 text-rose-800'
-                        : 'bg-pink-100 text-pink-800'
-                    }`}
-                  >
-                    {p.stock}
-                  </span>
-                  <button
-                    onClick={() => handleStockAdjust(p.id, 1)}
-                    className="w-7 h-7 bg-white border border-pink-200 text-pink-700 rounded-lg flex items-center justify-center font-bold"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ProductManager categories={categories} onProductsChange={setProducts} />
       )}
+
+      {/* Promo Codes / Coupons Tab */}
+      {activeTab === 'coupons' && <CouponManager />}
 
       {/* Delivery Zones Tab */}
-      {activeTab === 'zones' && (
-        <div className="bg-white rounded-4xl border border-pink-100 p-6 shadow-soft space-y-4">
-          <h2 className="font-black text-base text-slate-900">Ghana Delivery Zones & Fees</h2>
-          <div className="space-y-3">
-            {mockDeliveryZones.map((z) => (
-              <div
-                key={z.id}
-                className="p-4 bg-pink-50/40 border border-pink-100 rounded-3xl flex justify-between items-center text-xs"
-              >
-                <div>
-                  <h4 className="font-bold text-slate-900">{z.name}</h4>
-                  <p className="text-slate-500 text-[11px]">{z.estimatedDeliveryTime}</p>
-                </div>
-                <span className="font-black text-pink-600 text-sm">
-                  {formatGHS(z.deliveryFee)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+      {activeTab === 'zones' && <DeliveryZoneManager />}
+
+      {/* Categories Management Tab */}
+      {activeTab === 'categories' && (
+        <CategoryManager onCategoriesChange={setCategories} />
       )}
+
+      {/* Hero Banners Management Tab */}
+      {activeTab === 'banners' && <BannerManager />}
+
+      {/* Store Global Settings Tab */}
+      {activeTab === 'settings' && <StoreSettingsManager />}
     </div>
   );
 }
