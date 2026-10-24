@@ -46,6 +46,7 @@ export default function StoreSettingsManager() {
     try {
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });

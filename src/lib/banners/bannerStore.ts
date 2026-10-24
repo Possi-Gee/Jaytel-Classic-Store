@@ -1,6 +1,4 @@
 import { BannerSlide } from '@/types';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export const initialBanners: BannerSlide[] = [
   {
@@ -116,23 +114,91 @@ export const initialBanners: BannerSlide[] = [
 // Runtime in-memory banners list
 export const activeBanners: BannerSlide[] = [...initialBanners];
 
+let isInitialized = false;
+
+async function getAdminDb() {
+  if (typeof window === 'undefined') {
+    try {
+      const { getAdminFirestore } = await import('@/lib/firebase/admin');
+      return getAdminFirestore();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function getFsAndPath() {
+  if (typeof window === 'undefined') {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'src', 'data', 'persistedBanners.json');
+    return { fs, filePath };
+  }
+  return null;
+}
+
+async function ensureLoaded() {
+  if (typeof window === 'undefined' && !isInitialized) {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        const exists = await storage.fs.access(storage.filePath).then(() => true).catch(() => false);
+        if (exists) {
+          const content = await storage.fs.readFile(storage.filePath, 'utf8');
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            activeBanners.length = 0;
+            activeBanners.push(...parsed);
+          }
+        } else {
+          await storage.fs.writeFile(storage.filePath, JSON.stringify(activeBanners, null, 2), 'utf8');
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load banners from disk cache:', e);
+    }
+    isInitialized = true;
+  }
+}
+
+async function syncLocalFile() {
+  if (typeof window === 'undefined') {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        await storage.fs.writeFile(storage.filePath, JSON.stringify(activeBanners, null, 2), 'utf8');
+      }
+    } catch (err) {
+      console.warn('Failed to persist banners to disk:', err);
+    }
+  }
+}
+
 /**
  * Retrieve all active banners
  */
 export async function getBanners(includeInactive = false): Promise<BannerSlide[]> {
-  if (isFirebaseConfigured && db) {
+  await ensureLoaded();
+
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      const snap = await getDocs(collection(db, 'banners'));
+      const snap = await adminDb.collection('banners').get();
       if (!snap.empty) {
         const firestoreBanners: BannerSlide[] = [];
         snap.forEach((docSnap) => {
           firestoreBanners.push({ id: docSnap.id, ...(docSnap.data() as any) });
         });
-        firestoreBanners.sort((a, b) => (a.order || 99) - (b.order || 99));
-        return includeInactive ? firestoreBanners : firestoreBanners.filter((b) => b.isActive !== false);
+
+        const existingIds = new Set(firestoreBanners.map((b) => b.id));
+        const merged = [...firestoreBanners, ...activeBanners.filter((b) => !existingIds.has(b.id))];
+        activeBanners.length = 0;
+        activeBanners.push(...merged);
+        await syncLocalFile();
       }
-    } catch (e) {
-      console.warn('Firestore banners fetch failed, falling back to memory store:', e);
+    } catch {
+      // Non-fatal fallback
     }
   }
 
@@ -144,6 +210,8 @@ export async function getBanners(includeInactive = false): Promise<BannerSlide[]
  * Add a new banner
  */
 export async function addBanner(bannerData: Omit<BannerSlide, 'id' | 'createdAt'>): Promise<BannerSlide> {
+  await ensureLoaded();
+
   const newId = `banner-${Date.now()}`;
   const newBanner: BannerSlide = {
     id: newId,
@@ -174,12 +242,14 @@ export async function addBanner(bannerData: Omit<BannerSlide, 'id' | 'createdAt'
   };
 
   activeBanners.push(newBanner);
+  await syncLocalFile();
 
-  if (isFirebaseConfigured && db) {
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      await setDoc(doc(db, 'banners', newId), newBanner);
-    } catch (e) {
-      console.warn('Firestore set banner failed:', e);
+      await adminDb.collection('banners').doc(newId).set(newBanner);
+    } catch (e: any) {
+      console.warn('Firestore set banner notice:', e?.message || e);
     }
   }
 
@@ -190,6 +260,8 @@ export async function addBanner(bannerData: Omit<BannerSlide, 'id' | 'createdAt'
  * Update an existing banner
  */
 export async function updateBanner(id: string, updates: Partial<BannerSlide>): Promise<BannerSlide | null> {
+  await ensureLoaded();
+
   const index = activeBanners.findIndex((b) => b.id === id);
   if (index === -1) return null;
 
@@ -200,11 +272,14 @@ export async function updateBanner(id: string, updates: Partial<BannerSlide>): P
     updatedAt: new Date().toISOString(),
   };
 
-  if (isFirebaseConfigured && db) {
+  await syncLocalFile();
+
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      await updateDoc(doc(db, 'banners', id), updates as any);
-    } catch (e) {
-      console.warn('Firestore update banner failed:', e);
+      await adminDb.collection('banners').doc(id).set(activeBanners[index], { merge: true });
+    } catch (e: any) {
+      console.warn('Firestore update banner notice:', e?.message || e);
     }
   }
 
@@ -215,16 +290,20 @@ export async function updateBanner(id: string, updates: Partial<BannerSlide>): P
  * Delete a banner
  */
 export async function deleteBanner(id: string): Promise<boolean> {
+  await ensureLoaded();
+
   const index = activeBanners.findIndex((b) => b.id === id);
   if (index === -1) return false;
 
   activeBanners.splice(index, 1);
+  await syncLocalFile();
 
-  if (isFirebaseConfigured && db) {
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      await deleteDoc(doc(db, 'banners', id));
-    } catch (e) {
-      console.warn('Firestore delete banner failed:', e);
+      await adminDb.collection('banners').doc(id).delete();
+    } catch (e: any) {
+      console.warn('Firestore delete banner notice:', e?.message || e);
     }
   }
 

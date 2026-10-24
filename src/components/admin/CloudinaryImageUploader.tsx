@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 
 interface CloudinaryUploadResult {
   url: string;
@@ -25,7 +25,15 @@ export default function CloudinaryImageUploader({
   const [progress, setProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const localPreviewRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Keep preview synced with currentImageUrl (e.g. when typing or pasting URL)
+  useEffect(() => {
+    if (currentImageUrl !== undefined) {
+      setPreview(currentImageUrl || null);
+    }
+  }, [currentImageUrl]);
 
   const uploadToCloudinary = useCallback(
     async (file: File) => {
@@ -50,39 +58,83 @@ export default function CloudinaryImageUploader({
 
       // Show local preview immediately
       const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result as string);
+      reader.onloadend = () => {
+        const dataUrl = reader.result as string;
+        localPreviewRef.current = dataUrl;
+        setPreview(dataUrl);
+      };
       reader.readAsDataURL(file);
 
       try {
-        // Step 1: Get signed upload params from our secure API
-        setProgress(20);
-        const sigRes = await fetch('/api/admin/cloudinary-signature');
-        if (!sigRes.ok) throw new Error('Failed to get upload signature');
-        const { timestamp, signature, cloudName, apiKey, folder } = await sigRes.json();
+        let uploadedUrl = '';
+        let uploadedPublicId = '';
+        let uploadSucceeded = false;
 
-        setProgress(40);
+        // Strategy 1: Direct signed upload to Cloudinary
+        try {
+          setProgress(25);
+          const sigRes = await fetch('/api/admin/cloudinary-signature', {
+            credentials: 'include',
+          });
 
-        // Step 2: Upload directly to Cloudinary
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('timestamp', String(timestamp));
-        formData.append('signature', signature);
-        formData.append('api_key', apiKey);
-        formData.append('folder', folder);
-        formData.append('transformation', 'w_1200,h_1200,c_limit,q_auto:good,f_auto');
+          if (sigRes.ok) {
+            const { timestamp, signature, cloudName, apiKey, folder, transformation } = await sigRes.json();
+            setProgress(45);
 
-        setProgress(60);
-        const uploadRes = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-          { method: 'POST', body: formData }
-        );
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('timestamp', String(timestamp));
+            formData.append('signature', signature);
+            formData.append('api_key', apiKey);
+            formData.append('folder', folder);
+            if (transformation) {
+              formData.append('transformation', transformation);
+            }
 
-        if (!uploadRes.ok) throw new Error('Upload to Cloudinary failed');
+            setProgress(65);
+            const uploadRes = await fetch(
+              `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+              { method: 'POST', body: formData }
+            );
 
-        const data = await uploadRes.json();
+            if (uploadRes.ok) {
+              const data = await uploadRes.json();
+              uploadedUrl = data.secure_url;
+              uploadedPublicId = data.public_id;
+              uploadSucceeded = true;
+            }
+          }
+        } catch (directErr) {
+          console.warn('Direct upload attempt had error, falling back to server route:', directErr);
+        }
+
+        // Strategy 2: Server-side upload fallback if direct upload did not succeed
+        if (!uploadSucceeded) {
+          setProgress(70);
+          const fallbackData = new FormData();
+          fallbackData.append('file', file);
+          fallbackData.append('folder', 'jaytel-classic/products');
+
+          const serverRes = await fetch('/api/admin/upload', {
+            method: 'POST',
+            body: fallbackData,
+            credentials: 'include',
+          });
+
+          const serverJson = await serverRes.json().catch(() => ({}));
+
+          if (!serverRes.ok || !serverJson.success) {
+            throw new Error(serverJson.error || 'Upload failed. Please check administrator connection.');
+          }
+
+          uploadedUrl = serverJson.url;
+          uploadedPublicId = serverJson.publicId;
+          uploadSucceeded = true;
+        }
+
         setProgress(100);
-
-        onUploadComplete({ url: data.secure_url, publicId: data.public_id });
+        setPreview(uploadedUrl);
+        onUploadComplete({ url: uploadedUrl, publicId: uploadedPublicId });
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Upload failed. Please try again.';
         setError(msg);
@@ -137,18 +189,47 @@ export default function CloudinaryImageUploader({
         }}
       >
         {preview ? (
-          <img
-            src={preview}
-            alt="Preview"
-            style={{
-              maxHeight: '160px',
-              maxWidth: '100%',
-              objectFit: 'contain',
-              borderRadius: '8px',
-              opacity: uploading ? 0.5 : 1,
-              transition: 'opacity 0.3s',
-            }}
-          />
+          <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <img
+              src={preview}
+              alt="Preview"
+              onError={() => {
+                if (localPreviewRef.current && preview !== localPreviewRef.current) {
+                  setPreview(localPreviewRef.current);
+                }
+              }}
+              style={{
+                maxHeight: '160px',
+                maxWidth: '100%',
+                objectFit: 'contain',
+                borderRadius: '8px',
+                opacity: uploading ? 0.5 : 1,
+                transition: 'opacity 0.3s',
+              }}
+            />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                fileInputRef.current?.click();
+              }}
+              style={{
+                position: 'absolute',
+                top: 0,
+                right: 0,
+                background: 'rgba(233,30,140,0.85)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '4px 8px',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Change Photo 📸
+            </button>
+          </div>
         ) : (
           <>
             <div style={{ fontSize: '40px' }}>📷</div>

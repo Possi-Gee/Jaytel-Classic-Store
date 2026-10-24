@@ -40,19 +40,26 @@ export async function deleteProductImage(publicId: string): Promise<void> {
  * Generate a signed upload URL (for direct browser-to-Cloudinary uploads).
  */
 export function generateSignedUploadParams(folder = 'jaytel-classic/products') {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    throw new Error('Cloudinary credentials (NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET) are missing or incomplete.');
+  }
+
   const timestamp = Math.round(new Date().getTime() / 1000);
-  const paramsToSign = { timestamp, folder };
-  const signature = cloudinary.utils.api_sign_request(
-    paramsToSign,
-    process.env.CLOUDINARY_API_SECRET!
-  );
+  const transformation = 'w_1200,h_1200,c_limit,q_auto:good,f_auto';
+  const paramsToSign = { folder, timestamp, transformation };
+  const signature = cloudinary.utils.api_sign_request(paramsToSign, apiSecret);
 
   return {
     timestamp,
     signature,
-    cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME!,
-    apiKey: process.env.CLOUDINARY_API_KEY!,
+    cloudName,
+    apiKey,
     folder,
+    transformation,
   };
 }
 

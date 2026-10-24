@@ -1,7 +1,7 @@
 import { Order, OrderStatus } from '@/types';
 import { mockProducts } from '@/data/mockData';
 
-// Centralized order store (in-memory for runtime + seeded with mock for initial testing)
+// Centralized order store (in-memory for runtime + persistent on disk)
 export const activeOrders: Order[] = [];
 
 // Idempotency tracking for checkout attempts: Map<idempotencyKey, orderId>
@@ -9,6 +9,58 @@ export const idempotencyKeys = new Map<string, string>();
 
 // Consumed payment references: Set<reference> -> maps to orderId
 export const consumedPaymentReferences = new Map<string, string>();
+
+let isInitialized = false;
+
+async function getFsAndPath() {
+  if (typeof window === 'undefined') {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'src', 'data', 'persistedOrders.json');
+    return { fs, filePath };
+  }
+  return null;
+}
+
+async function ensureLoaded() {
+  if (typeof window === 'undefined' && !isInitialized) {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        const exists = await storage.fs.access(storage.filePath).then(() => true).catch(() => false);
+        if (exists) {
+          const content = await storage.fs.readFile(storage.filePath, 'utf8');
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            activeOrders.length = 0;
+            activeOrders.push(...parsed);
+          }
+        } else {
+          await storage.fs.writeFile(storage.filePath, JSON.stringify(activeOrders, null, 2), 'utf8');
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load orders from disk cache:', e);
+    }
+    isInitialized = true;
+  }
+}
+
+async function syncLocalFile() {
+  if (typeof window === 'undefined') {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        await storage.fs.writeFile(storage.filePath, JSON.stringify(activeOrders, null, 2), 'utf8');
+      }
+    } catch (err) {
+      console.warn('Failed to persist orders to disk:', err);
+    }
+  }
+}
+
+// Kick off initial load
+ensureLoaded().catch(() => {});
 
 /**
  * Find order by ID or order number
@@ -44,6 +96,8 @@ export function saveOrder(order: Order, idempotencyKey?: string): { success: boo
     idempotencyKeys.set(idempotencyKey, order.id);
   }
 
+  syncLocalFile().catch(() => {});
+
   return { success: true, order, isDuplicate: false };
 }
 
@@ -70,6 +124,8 @@ export function updateOrderStatus(
   if (metadata) {
     Object.assign(order, metadata);
   }
+
+  syncLocalFile().catch(() => {});
 
   return order;
 }
@@ -120,7 +176,6 @@ export function sanitizeOrderForPublic(order: Order) {
       variantName: item.variantName,
       subtotal: item.subtotal,
     })),
-    // Masked customer details for confirmation without leaking private data
     maskedCustomer: {
       name: order.customerName ? `${order.customerName[0]}***` : 'Customer',
       phone: order.customerPhone ? `${order.customerPhone.slice(0, 3)}****${order.customerPhone.slice(-2)}` : '',

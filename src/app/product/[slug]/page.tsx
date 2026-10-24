@@ -47,7 +47,7 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await fetch('/api/admin/products');
+        const res = await fetch('/api/products');
         if (res.ok) {
           const data = await res.json();
           if (data.success && Array.isArray(data.products)) {

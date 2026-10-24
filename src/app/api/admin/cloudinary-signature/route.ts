@@ -17,12 +17,15 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized: Admin privileges required' }, { status: 401 });
     }
 
-    const params = generateSignedUploadParams('jaytel-classic/products');
+    const { searchParams } = new URL(request.url);
+    const folder = searchParams.get('folder') || 'jaytel-classic/products';
+
+    const params = generateSignedUploadParams(folder);
     return NextResponse.json(params);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Cloudinary signature error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate upload signature' },
+      { error: error?.message || 'Failed to generate upload signature' },
       { status: 500 }
     );
   }

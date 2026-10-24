@@ -99,6 +99,7 @@ export default function CouponManager() {
     try {
       const res = await fetch(`/api/admin/coupons?id=${encodeURIComponent(targetId)}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.success) {
@@ -119,6 +120,7 @@ export default function CouponManager() {
     try {
       const res = await fetch('/api/admin/coupons', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           code: code.trim().toUpperCase(),

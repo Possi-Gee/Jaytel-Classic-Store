@@ -12,10 +12,6 @@ import {
   ShoppingBag,
   Truck,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Pause,
-  Play,
 } from 'lucide-react';
 import { BannerSlide } from '@/types';
 import { initialBanners } from '@/lib/banners/bannerStore';
@@ -33,7 +29,6 @@ export default function HeroCarousel({
     initialBannersList && initialBannersList.length > 0 ? initialBannersList : initialBanners
   );
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isPaused, setIsPaused] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch updated banners dynamically from API
@@ -58,13 +53,9 @@ export default function HeroCarousel({
     setCurrentIndex((prev) => (prev + 1) % banners.length);
   }, [banners.length]);
 
-  const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
-  }, [banners.length]);
-
-  // Auto-scroll effect
+  // Automatic scrolling timer (no manual pause controls needed)
   useEffect(() => {
-    if (banners.length <= 1 || isPaused) return;
+    if (banners.length <= 1) return;
 
     timerRef.current = setInterval(() => {
       nextSlide();
@@ -73,7 +64,7 @@ export default function HeroCarousel({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [banners.length, isPaused, autoScrollSeconds, nextSlide]);
+  }, [banners.length, autoScrollSeconds, nextSlide]);
 
   if (banners.length === 0) return null;
 
@@ -82,9 +73,7 @@ export default function HeroCarousel({
   return (
     <section
       aria-label="Hero Showcase Carousel"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
-      className="relative rounded-3xl sm:rounded-4xl overflow-hidden text-white shadow-2xl border border-pink-500/20 transition-all duration-700 group"
+      className="relative rounded-3xl sm:rounded-4xl overflow-hidden text-white shadow-2xl border border-pink-500/20 h-[480px] sm:h-[500px] lg:h-[540px] flex flex-col justify-center group"
     >
       {/* Background Gradient */}
       <div
@@ -97,7 +86,7 @@ export default function HeroCarousel({
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl pointer-events-none animate-pulse" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-rose-500/30 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Mobile background product showcase overlay */}
+      {/* Mobile background product showcase overlay with fixed proportions */}
       <Link
         href={currentBanner.featuredCard?.link || currentBanner.primaryBtnLink || '/shop'}
         className="absolute right-0 top-0 bottom-0 w-[42%] sm:w-[45%] lg:hidden overflow-hidden block z-0"
@@ -133,25 +122,25 @@ export default function HeroCarousel({
         </div>
       </Link>
 
-      {/* Main Container */}
-      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center p-5 sm:p-8 lg:p-14">
+      {/* Main Container - Fixed grid with consistent alignment */}
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-12 items-center p-5 sm:p-8 lg:p-12 h-full">
         {/* Left Column: Headline & Action Buttons */}
-        <div className="max-w-[62%] sm:max-w-[58%] lg:max-w-none lg:col-span-7 space-y-3 sm:space-y-5 animate-fadeIn">
+        <div className="max-w-[62%] sm:max-w-[58%] lg:max-w-none lg:col-span-7 flex flex-col justify-center space-y-3 sm:space-y-4 animate-fadeIn">
           {/* Badge */}
-          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[9px] sm:text-xs font-bold text-pink-200 shadow-sm">
+          <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-4 py-1 sm:py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[9px] sm:text-xs font-bold text-pink-200 shadow-sm self-start">
             <Crown className="w-3 h-3 sm:w-4 sm:h-4 text-amber-300 animate-pulse" />
             <span>{currentBanner.badgeText || "Accra's Premier Boutique"}</span>
           </div>
 
           {/* Headline & Description */}
           <div className="space-y-1 sm:space-y-2">
-            <h1 className="text-xl sm:text-3xl lg:text-6xl font-black tracking-tight leading-[1.12] text-white">
+            <h1 className="text-xl sm:text-3xl lg:text-5xl xl:text-6xl font-black tracking-tight leading-[1.12] text-white">
               {currentBanner.title} <br />
               <span className="bg-gradient-to-r from-pink-300 via-rose-200 to-pink-400 bg-clip-text text-transparent drop-shadow-sm">
                 {currentBanner.highlightText}
               </span>
             </h1>
-            <p className="text-[11px] sm:text-sm lg:text-base text-pink-100/90 leading-relaxed font-normal line-clamp-2 sm:line-clamp-none max-w-xl">
+            <p className="text-[11px] sm:text-sm lg:text-base text-pink-100/90 leading-relaxed font-normal line-clamp-2 sm:line-clamp-3 max-w-xl">
               {currentBanner.subtitle}
             </p>
           </div>
@@ -211,12 +200,12 @@ export default function HeroCarousel({
           </div>
         </div>
 
-        {/* Right Column: Featured Product Card (Desktop) */}
-        <div className="hidden lg:flex lg:col-span-5 relative justify-center lg:justify-end">
-          <div className="relative w-full max-w-sm">
-            {/* Card Container */}
+        {/* Right Column: Featured Product Card (Desktop) - Fixed dimensions */}
+        <div className="hidden lg:flex lg:col-span-5 relative justify-center lg:justify-end items-center">
+          <div className="relative w-full max-w-[340px] xl:max-w-[360px]">
+            {/* Card Container with fixed height so image aspect ratio never shifts banner size */}
             <div className="relative rounded-3xl overflow-hidden bg-gradient-to-b from-white/15 to-white/5 border border-white/25 p-3.5 shadow-2xl backdrop-blur-xl group/card">
-              <div className="relative aspect-[4/4] sm:aspect-[4/4.5] w-full rounded-2xl overflow-hidden bg-pink-950/40">
+              <div className="relative h-[360px] w-full rounded-2xl overflow-hidden bg-pink-950/40">
                 <Image
                   src={
                     currentBanner.featuredCard?.image ||
@@ -225,7 +214,7 @@ export default function HeroCarousel({
                   alt={currentBanner.featuredCard?.title || 'Featured Product'}
                   fill
                   priority
-                  sizes="(max-width: 768px) 100vw, 400px"
+                  sizes="360px"
                   className="object-cover group-hover/card:scale-105 transition-transform duration-700 ease-out"
                 />
                 {/* Vignette */}
@@ -290,52 +279,21 @@ export default function HeroCarousel({
         </div>
       </div>
 
-      {/* Carousel Navigation Controls (Arrows & Indicators) */}
+      {/* Slide Indicators: Subtle Dots Only (Back, Forward, and Pause/Play removed per user request) */}
       {banners.length > 1 && (
-        <div className="absolute bottom-4 sm:bottom-6 left-5 sm:left-8 z-20 flex items-center gap-3">
-          {/* Prev / Next Arrows */}
-          <div className="flex items-center gap-1.5">
+        <div className="absolute bottom-4 sm:bottom-6 left-5 sm:left-8 z-20 flex items-center gap-1.5 bg-slate-950/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
+          {banners.map((_, idx) => (
             <button
-              onClick={prevSlide}
-              aria-label="Previous slide"
-              className="p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 border border-white/20 text-white backdrop-blur-md transition-all active:scale-90"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              onClick={nextSlide}
-              aria-label="Next slide"
-              className="p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 border border-white/20 text-white backdrop-blur-md transition-all active:scale-90"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Dots Indicator */}
-          <div className="flex items-center gap-1.5 bg-slate-950/40 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/20">
-            {banners.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                aria-label={`Go to slide ${idx + 1}`}
-                className={`transition-all duration-300 rounded-full ${
-                  currentIndex === idx
-                    ? 'w-5 h-2 bg-gradient-to-r from-pink-400 to-rose-400'
-                    : 'w-2 h-2 bg-white/40 hover:bg-white/70'
-                }`}
-              />
-            ))}
-          </div>
-
-          {/* Pause / Play Indicator */}
-          <button
-            onClick={() => setIsPaused(!isPaused)}
-            aria-label={isPaused ? 'Resume auto scroll' : 'Pause auto scroll'}
-            className="p-1.5 rounded-full bg-slate-950/40 hover:bg-slate-950/70 border border-white/20 text-white/80 hover:text-white backdrop-blur-md transition-all text-[10px]"
-            title={isPaused ? 'Auto-scroll paused (Click to resume)' : 'Auto-scrolling (Click to pause)'}
-          >
-            {isPaused ? <Play className="w-3 h-3 text-pink-300" /> : <Pause className="w-3 h-3" />}
-          </button>
+              key={idx}
+              onClick={() => setCurrentIndex(idx)}
+              aria-label={`Go to slide ${idx + 1}`}
+              className={`transition-all duration-300 rounded-full ${
+                currentIndex === idx
+                  ? 'w-6 h-2 bg-gradient-to-r from-pink-400 to-rose-400'
+                  : 'w-2 h-2 bg-white/40 hover:bg-white/70'
+              }`}
+            />
+          ))}
         </div>
       )}
     </section>

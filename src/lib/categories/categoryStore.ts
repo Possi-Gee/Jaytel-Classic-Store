@@ -1,6 +1,4 @@
 import { ProductCategory } from '@/types';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export const initialCategories: ProductCategory[] = [
   {
@@ -104,7 +102,7 @@ export const initialCategories: ProductCategory[] = [
     name: 'Sewing Accessories',
     slug: 'sewing-accessories',
     description: 'High-grade sewing threads, tailoring shears, dressmaker needles, tape measures, buttons, and zippers.',
-    image: 'https://images.unsplash.com/photo-1528458876885-54424332497b?auto=format&fit=crop&w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=800&q=80',
     icon: 'Sparkles',
     productCount: 22,
     featured: false,
@@ -128,23 +126,91 @@ export const initialCategories: ProductCategory[] = [
 // Runtime in-memory categories list
 export const activeCategories: ProductCategory[] = [...initialCategories];
 
+let isInitialized = false;
+
+async function getAdminDb() {
+  if (typeof window === 'undefined') {
+    try {
+      const { getAdminFirestore } = await import('@/lib/firebase/admin');
+      return getAdminFirestore();
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function getFsAndPath() {
+  if (typeof window === 'undefined') {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'src', 'data', 'persistedCategories.json');
+    return { fs, filePath };
+  }
+  return null;
+}
+
+async function ensureLoaded() {
+  if (typeof window === 'undefined' && !isInitialized) {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        const exists = await storage.fs.access(storage.filePath).then(() => true).catch(() => false);
+        if (exists) {
+          const content = await storage.fs.readFile(storage.filePath, 'utf8');
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            activeCategories.length = 0;
+            activeCategories.push(...parsed);
+          }
+        } else {
+          await storage.fs.writeFile(storage.filePath, JSON.stringify(activeCategories, null, 2), 'utf8');
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load categories from disk cache:', e);
+    }
+    isInitialized = true;
+  }
+}
+
+async function syncLocalFile() {
+  if (typeof window === 'undefined') {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        await storage.fs.writeFile(storage.filePath, JSON.stringify(activeCategories, null, 2), 'utf8');
+      }
+    } catch (err) {
+      console.warn('Failed to persist categories to disk:', err);
+    }
+  }
+}
+
 /**
  * Retrieve all active categories (ordered)
  */
 export async function getCategories(includeInactive = false): Promise<ProductCategory[]> {
-  if (isFirebaseConfigured && db) {
+  await ensureLoaded();
+
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      const snap = await getDocs(collection(db, 'categories'));
+      const snap = await adminDb.collection('categories').get();
       if (!snap.empty) {
         const firestoreCats: ProductCategory[] = [];
         snap.forEach((docSnap) => {
           firestoreCats.push({ id: docSnap.id, ...(docSnap.data() as any) });
         });
-        firestoreCats.sort((a, b) => (a.order || 99) - (b.order || 99));
-        return includeInactive ? firestoreCats : firestoreCats.filter((c) => c.isActive !== false);
+
+        const existingIds = new Set(firestoreCats.map((c) => c.id));
+        const merged = [...firestoreCats, ...activeCategories.filter((c) => !existingIds.has(c.id))];
+        activeCategories.length = 0;
+        activeCategories.push(...merged);
+        await syncLocalFile();
       }
-    } catch (e) {
-      console.warn('Firestore categories fetch failed, falling back to memory store:', e);
+    } catch {
+      // Non-fatal fallback
     }
   }
 
@@ -156,9 +222,11 @@ export async function getCategories(includeInactive = false): Promise<ProductCat
  * Add a new category
  */
 export async function addCategory(categoryData: Omit<ProductCategory, 'id'>): Promise<ProductCategory> {
+  await ensureLoaded();
+
   const newId = `cat-${Date.now()}`;
   const slug = categoryData.slug || categoryData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  
+
   const newCat: ProductCategory = {
     id: newId,
     name: categoryData.name,
@@ -173,12 +241,14 @@ export async function addCategory(categoryData: Omit<ProductCategory, 'id'>): Pr
   };
 
   activeCategories.push(newCat);
+  await syncLocalFile();
 
-  if (isFirebaseConfigured && db) {
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      await setDoc(doc(db, 'categories', newId), newCat);
-    } catch (e) {
-      console.warn('Firestore set category failed:', e);
+      await adminDb.collection('categories').doc(newId).set(newCat);
+    } catch (e: any) {
+      console.warn('Firestore set category notice:', e?.message || e);
     }
   }
 
@@ -189,6 +259,8 @@ export async function addCategory(categoryData: Omit<ProductCategory, 'id'>): Pr
  * Update existing category
  */
 export async function updateCategory(id: string, updates: Partial<ProductCategory>): Promise<ProductCategory | null> {
+  await ensureLoaded();
+
   const index = activeCategories.findIndex((c) => c.id === id);
   if (index === -1) return null;
 
@@ -198,11 +270,14 @@ export async function updateCategory(id: string, updates: Partial<ProductCategor
     id, // preserve ID
   };
 
-  if (isFirebaseConfigured && db) {
+  await syncLocalFile();
+
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      await updateDoc(doc(db, 'categories', id), updates as any);
-    } catch (e) {
-      console.warn('Firestore update category failed:', e);
+      await adminDb.collection('categories').doc(id).set(activeCategories[index], { merge: true });
+    } catch (e: any) {
+      console.warn('Firestore update category notice:', e?.message || e);
     }
   }
 
@@ -213,16 +288,20 @@ export async function updateCategory(id: string, updates: Partial<ProductCategor
  * Delete a category
  */
 export async function deleteCategory(id: string): Promise<boolean> {
+  await ensureLoaded();
+
   const index = activeCategories.findIndex((c) => c.id === id);
   if (index === -1) return false;
 
   activeCategories.splice(index, 1);
+  await syncLocalFile();
 
-  if (isFirebaseConfigured && db) {
+  const adminDb = await getAdminDb();
+  if (adminDb) {
     try {
-      await deleteDoc(doc(db, 'categories', id));
-    } catch (e) {
-      console.warn('Firestore delete category failed:', e);
+      await adminDb.collection('categories').doc(id).delete();
+    } catch (e: any) {
+      console.warn('Firestore delete category notice:', e?.message || e);
     }
   }
 

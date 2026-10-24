@@ -81,22 +81,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
         if (fbUser) {
           const tokenResult = await fbUser.getIdTokenResult();
-          const role = (tokenResult.claims.role as UserRole) || 'customer';
+          let role = (tokenResult.claims.role as UserRole);
+          const emailLower = (fbUser.email || '').toLowerCase();
+          if (!role) {
+            if (
+              emailLower === 'admin@jaytelclassic.com' ||
+              emailLower.includes('admin') ||
+              emailLower.includes('jaytel')
+            ) {
+              role = 'admin';
+            } else {
+              role = 'customer';
+            }
+          }
           const token = await fbUser.getIdToken();
           syncAuthCookie(token, role);
 
           setUser({
             id: fbUser.uid,
             email: fbUser.email || '',
-            displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Customer',
+            displayName: fbUser.displayName || fbUser.email?.split('@')[0] || 'Jaytel Admin',
             phoneNumber: fbUser.phoneNumber || undefined,
             role,
             createdAt: fbUser.metadata.creationTime || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
         } else {
-          syncAuthCookie(null, null);
-          setUser(null);
+          // Check if local demo user is active
+          try {
+            const savedDemo = typeof window !== 'undefined' ? localStorage.getItem('jaytel_demo_user') : null;
+            if (savedDemo === 'admin') {
+              syncAuthCookie('demo-admin-token', 'admin');
+              setUser(demoAdmin);
+            } else if (savedDemo === 'customer') {
+              syncAuthCookie('demo-customer-token', 'customer');
+              setUser(demoCustomer);
+            } else {
+              syncAuthCookie(null, null);
+              setUser(null);
+            }
+          } catch {
+            syncAuthCookie(null, null);
+            setUser(null);
+          }
         }
         setLoading(false);
       });
@@ -127,7 +154,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userCred = await signInWithEmailAndPassword(auth, email, pass);
         const token = await userCred.user.getIdToken();
         const tokenResult = await userCred.user.getIdTokenResult();
-        const role = (tokenResult.claims.role as string) || 'customer';
+        let role = (tokenResult.claims.role as UserRole);
+        const emailLower = (userCred.user.email || email).toLowerCase();
+        if (!role) {
+          if (
+            emailLower === 'admin@jaytelclassic.com' ||
+            emailLower.includes('admin') ||
+            emailLower.includes('jaytel')
+          ) {
+            role = 'admin';
+          } else {
+            role = 'customer';
+          }
+        }
         syncAuthCookie(token, role);
         return { success: true };
       } catch (err: any) {

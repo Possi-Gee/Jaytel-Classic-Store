@@ -51,6 +51,16 @@ export default function ProductManager({ categories, onProductsChange }: Product
   // Form State
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(categories[0]?.name || 'Shoes / Bags');
+  const [isAddingNewCategory, setIsAddingNewCategory] = useState(false);
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [localCategories, setLocalCategories] = useState<ProductCategory[]>(categories);
+
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      setLocalCategories(categories);
+    }
+  }, [categories]);
+
   const [price, setPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [stock, setStock] = useState('10');
@@ -68,7 +78,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
   // Load products from API
   const fetchProducts = async () => {
     try {
-      const res = await fetch('/api/admin/products');
+      const res = await fetch('/api/admin/products', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.products)) {
@@ -186,6 +196,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
     try {
       const res = await fetch('/api/admin/products', {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId, stockDelta: delta }),
       });
@@ -209,6 +220,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
     try {
       const res = await fetch(`/api/admin/products?id=${encodeURIComponent(prod.id)}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.success) {
@@ -231,7 +243,25 @@ export default function ProductManager({ categories, onProductsChange }: Product
     if (!title.trim() || !price) return;
 
     setIsSubmitting(true);
-    const catObj = categories.find((c) => c.name === category) || categories[0];
+
+    // If this category is custom or not in existing categories, persist it to server
+    if (category && category.trim()) {
+      try {
+        const found = localCategories.some((c) => c.name.toLowerCase() === category.trim().toLowerCase());
+        if (!found) {
+          await fetch('/api/admin/categories', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: category.trim() }),
+          });
+        }
+      } catch (err) {
+        console.warn('Auto-create category non-fatal error:', err);
+      }
+    }
+
+    const catObj = localCategories.find((c) => c.name === category) || localCategories[0] || categories[0];
 
     // Combine primary and gallery images
     const allImages: string[] = [];
@@ -279,6 +309,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
         // PATCH
         const res = await fetch('/api/admin/products', {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ productId: editingProductId, ...payload }),
         });
@@ -296,12 +327,13 @@ export default function ProductManager({ categories, onProductsChange }: Product
           });
           setTimeout(() => setStatusMessage(null), 3500);
         } else {
-          alert(data.error || 'Failed to update product');
+          setStatusMessage({ text: data.error || 'Failed to update product', isError: true });
         }
       } else {
         // POST
         const res = await fetch('/api/admin/products', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
@@ -319,7 +351,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
           });
           setTimeout(() => setStatusMessage(null), 3500);
         } else {
-          alert(data.error || 'Failed to create product');
+          setStatusMessage({ text: data.error || 'Failed to create product', isError: true });
         }
       }
     } catch (err) {
@@ -435,6 +467,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
                       src={p.images[0] || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=600&q=80'}
                       alt={p.title}
                       fill
+                      unoptimized
                       className="object-cover"
                     />
                     {p.images.length > 1 && (
@@ -613,7 +646,7 @@ export default function ProductManager({ categories, onProductsChange }: Product
                         key={idx}
                         className="relative w-16 h-16 rounded-xl overflow-hidden border border-pink-200 group bg-white"
                       >
-                        <Image src={img} alt={`Angle ${idx + 1}`} fill className="object-cover" />
+                        <Image src={img} alt={`Angle ${idx + 1}`} fill unoptimized className="object-cover" />
                         <button
                           type="button"
                           onClick={() => handleRemoveGalleryImage(idx)}
@@ -662,17 +695,87 @@ export default function ProductManager({ categories, onProductsChange }: Product
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full p-2.5 bg-white border border-pink-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-pink-500"
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  {isAddingNewCategory ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Type new category name…"
+                        value={customCategoryName}
+                        autoFocus
+                        onChange={(e) => setCustomCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const trimmed = customCategoryName.trim();
+                            if (trimmed) {
+                              const newCat = {
+                                id: `cat-custom-${Date.now()}`,
+                                name: trimmed,
+                                slug: trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+                                description: '',
+                                image: '',
+                                featured: false,
+                                isActive: true,
+                                productCount: 0,
+                              };
+                              setLocalCategories((prev) => [...prev, newCat]);
+                              setCategory(trimmed);
+                            }
+                            setIsAddingNewCategory(false);
+                            setCustomCategoryName('');
+                          } else if (e.key === 'Escape') {
+                            setIsAddingNewCategory(false);
+                            setCustomCategoryName('');
+                          }
+                        }}
+                        className="flex-1 p-2.5 bg-white border border-pink-400 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const trimmed = customCategoryName.trim();
+                          if (trimmed) {
+                            const newCat = {
+                              id: `cat-custom-${Date.now()}`,
+                              name: trimmed,
+                              slug: trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+                              description: '',
+                              image: '',
+                              featured: false,
+                              isActive: true,
+                              productCount: 0,
+                            };
+                            setLocalCategories((prev) => [...prev, newCat]);
+                            setCategory(trimmed);
+                          }
+                          setIsAddingNewCategory(false);
+                          setCustomCategoryName('');
+                        }}
+                        className="px-3 py-2 bg-pink-500 text-white rounded-xl text-xs font-bold hover:bg-pink-600"
+                      >✓ Add</button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2">
+                      <select
+                        value={category}
+                        onChange={(e) => {
+                          if (e.target.value === '__new__') {
+                            setIsAddingNewCategory(true);
+                          } else {
+                            setCategory(e.target.value);
+                          }
+                        }}
+                        className="flex-1 p-2.5 bg-white border border-pink-200 rounded-xl font-bold text-slate-900 focus:outline-none focus:ring-1 focus:ring-pink-500"
+                      >
+                        {localCategories.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                        <option value="__new__">＋ Add New Category…</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
               </div>
 

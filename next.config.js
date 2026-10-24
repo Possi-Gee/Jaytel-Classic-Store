@@ -3,9 +3,9 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.paystack.co https://apis.google.com;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  img-src 'self' blob: data: https://images.unsplash.com https://firebasestorage.googleapis.com https://placehold.co https://*.paystack.co;
+  img-src 'self' blob: data: https://images.unsplash.com https://firebasestorage.googleapis.com https://placehold.co https://*.paystack.co https://res.cloudinary.com https://*.cloudinary.com;
   font-src 'self' data: https://fonts.gstatic.com;
-  connect-src 'self' https://api.paystack.co https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com;
+  connect-src 'self' https://api.paystack.co https://*.firebaseio.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firestore.googleapis.com https://firebasestorage.googleapis.com https://api.cloudinary.com https://res.cloudinary.com https://*.cloudinary.com;
   frame-src 'self' https://checkout.paystack.com https://js.paystack.co;
   object-src 'none';
   base-uri 'self';
@@ -22,15 +22,28 @@ const nextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.cloudinary.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
         hostname: 'images.unsplash.com',
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'firebasestorage.googleapis.com',
+        pathname: '/**',
       },
       {
         protocol: 'https',
         hostname: 'placehold.co',
+        pathname: '/**',
       },
     ],
   },

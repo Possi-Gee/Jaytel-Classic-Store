@@ -34,9 +34,9 @@ export default function AdminDashboardPage() {
     async function loadData() {
       try {
         const [ordersRes, prodsRes, catsRes] = await Promise.all([
-          fetch('/api/admin/orders'),
-          fetch('/api/admin/products'),
-          fetch('/api/admin/categories'),
+          fetch('/api/admin/orders', { credentials: 'include' }),
+          fetch('/api/admin/products', { credentials: 'include' }),
+          fetch('/api/admin/categories', { credentials: 'include' }),
         ]);
 
         if (ordersRes.ok) {
@@ -72,6 +72,7 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch('/api/admin/orders', {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId, status: newStatus }),
       });

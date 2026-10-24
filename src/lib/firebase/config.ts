@@ -13,10 +13,9 @@ export const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:1234567890:web:abcdef',
 };
 
-// Check if credentials are placeholders or configured
+// Zero-configuration standalone mode: Firestore is only connected if explicitly enabled
 export const isFirebaseConfigured = Boolean(
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY !== 'demo-api-key'
+  process.env.NEXT_PUBLIC_ENABLE_FIRESTORE === 'true'
 );
 
 let app: FirebaseApp;
@@ -27,7 +26,13 @@ let storage: FirebaseStorage;
 if (typeof window !== 'undefined' || process.env.NODE_ENV !== 'production') {
   app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db = getFirestore(app);
+  if (isFirebaseConfigured) {
+    try {
+      db = getFirestore(app);
+    } catch {
+      // Ignored in standalone mode
+    }
+  }
   storage = getStorage(app);
 }
 

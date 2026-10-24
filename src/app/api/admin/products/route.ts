@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth/serverAuth';
-import { mockProducts } from '@/data/mockData';
-import { Product, ProductVariant } from '@/types';
+import { getProducts, addProduct, updateProduct, deleteProduct } from '@/lib/products/productStore';
+import { ProductVariant } from '@/types';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const products = await getProducts();
   return NextResponse.json({
     success: true,
-    products: mockProducts,
+    products,
   });
 }
 
@@ -63,10 +66,8 @@ export async function POST(req: NextRequest) {
       }));
     }
 
-    const newProd: Product = {
-      id: `prod-${Date.now()}`,
+    const newProd = await addProduct({
       title: title.trim(),
-      slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
       category: category || 'Shoes / Bags',
       categoryId: categoryId || 'cat-shoes-bags',
       price: Number(price),
@@ -79,13 +80,7 @@ export async function POST(req: NextRequest) {
       bestSeller: Boolean(bestSeller),
       isNewArrival: isNewArrival !== undefined ? Boolean(isNewArrival) : true,
       specifications: specifications || {},
-      rating: 5.0,
-      reviewCount: 1,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    mockProducts.unshift(newProd);
+    });
 
     return NextResponse.json({
       success: true,
@@ -118,7 +113,6 @@ export async function PATCH(req: NextRequest) {
       price,
       salePrice,
       stock,
-      stockDelta,
       description,
       images,
       variants,
@@ -134,62 +128,44 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    const prod = mockProducts.find((p) => p.id === productId);
-    if (!prod) {
-      return NextResponse.json(
-        { success: false, error: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    if (stockDelta !== undefined) {
-      prod.stock = Math.max(0, prod.stock + Number(stockDelta));
-    }
-    if (stock !== undefined) {
-      prod.stock = Math.max(0, Number(stock));
-    }
-    if (price !== undefined) {
-      prod.price = Number(price);
-    }
-    if (salePrice !== undefined) {
-      prod.salePrice = salePrice ? Number(salePrice) : undefined;
-    }
+    const updates: any = {};
     if (title !== undefined) {
-      prod.title = title.trim();
-      prod.slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      updates.title = title.trim();
+      updates.slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     }
-    if (category !== undefined) {
-      prod.category = category;
-    }
-    if (categoryId !== undefined) {
-      prod.categoryId = categoryId;
-    }
-    if (description !== undefined) {
-      prod.description = description;
-    }
-    if (Array.isArray(images) && images.length > 0) {
-      prod.images = images.filter(Boolean);
-    }
+    if (category !== undefined) updates.category = category;
+    if (categoryId !== undefined) updates.categoryId = categoryId;
+    if (price !== undefined) updates.price = Number(price);
+    if (salePrice !== undefined) updates.salePrice = salePrice ? Number(salePrice) : undefined;
+    if (stock !== undefined) updates.stock = Math.max(0, Number(stock));
+    if (description !== undefined) updates.description = description;
+    if (Array.isArray(images) && images.length > 0) updates.images = images.filter(Boolean);
     if (Array.isArray(variants)) {
-      prod.variants = variants.map((v: any, index: number) => ({
+      updates.variants = variants.map((v: any, index: number) => ({
         id: v.id || `var-${Date.now()}-${index}`,
         name: v.name || `Option ${index + 1}`,
-        price: Number(v.price) || prod.price,
+        price: Number(v.price) || updates.price || 0,
         salePrice: v.salePrice ? Number(v.salePrice) : undefined,
         stock: Number(v.stock) >= 0 ? Number(v.stock) : 10,
         attributes: v.attributes || { color: v.name },
         image: v.image || undefined,
       }));
     }
-    if (featured !== undefined) prod.featured = Boolean(featured);
-    if (bestSeller !== undefined) prod.bestSeller = Boolean(bestSeller);
-    if (isNewArrival !== undefined) prod.isNewArrival = Boolean(isNewArrival);
+    if (featured !== undefined) updates.featured = Boolean(featured);
+    if (bestSeller !== undefined) updates.bestSeller = Boolean(bestSeller);
+    if (isNewArrival !== undefined) updates.isNewArrival = Boolean(isNewArrival);
 
-    prod.updatedAt = new Date().toISOString();
+    const updated = await updateProduct(productId, updates);
+    if (!updated) {
+      return NextResponse.json(
+        { success: false, error: 'Product not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      product: prod,
+      product: updated,
     });
   } catch (error: any) {
     return NextResponse.json(
@@ -219,15 +195,13 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const index = mockProducts.findIndex((p) => p.id === productId);
-    if (index === -1) {
+    const deleted = await deleteProduct(productId);
+    if (!deleted) {
       return NextResponse.json(
         { success: false, error: 'Product not found' },
         { status: 404 }
       );
     }
-
-    mockProducts.splice(index, 1);
 
     return NextResponse.json({
       success: true,

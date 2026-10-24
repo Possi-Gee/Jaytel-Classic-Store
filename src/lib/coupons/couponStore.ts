@@ -1,6 +1,4 @@
 import { Coupon } from '@/types';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
-import { collection, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
 export const initialCoupons: Coupon[] = [
   {
@@ -42,26 +40,60 @@ export const initialCoupons: Coupon[] = [
 ];
 
 export const activeCoupons: Coupon[] = [...initialCoupons];
+let isInitialized = false;
+
+async function getFsAndPath() {
+  if (typeof window === 'undefined') {
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const filePath = path.join(process.cwd(), 'src', 'data', 'persistedCoupons.json');
+    return { fs, filePath };
+  }
+  return null;
+}
+
+async function ensureLoaded() {
+  if (typeof window === 'undefined' && !isInitialized) {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        const exists = await storage.fs.access(storage.filePath).then(() => true).catch(() => false);
+        if (exists) {
+          const content = await storage.fs.readFile(storage.filePath, 'utf8');
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            activeCoupons.length = 0;
+            activeCoupons.push(...parsed);
+          }
+        } else {
+          await storage.fs.writeFile(storage.filePath, JSON.stringify(activeCoupons, null, 2), 'utf8');
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load coupons from disk cache:', e);
+    }
+    isInitialized = true;
+  }
+}
+
+async function syncLocalFile() {
+  if (typeof window === 'undefined') {
+    try {
+      const storage = await getFsAndPath();
+      if (storage) {
+        await storage.fs.writeFile(storage.filePath, JSON.stringify(activeCoupons, null, 2), 'utf8');
+      }
+    } catch (err) {
+      console.warn('Failed to persist coupons to disk:', err);
+    }
+  }
+}
 
 /**
  * Retrieve all coupons
  */
 export async function getCoupons(includeInactive = false): Promise<Coupon[]> {
-  if (isFirebaseConfigured && db) {
-    try {
-      const snap = await getDocs(collection(db, 'coupons'));
-      if (!snap.empty) {
-        const firestoreCoupons: Coupon[] = [];
-        snap.forEach((docSnap) => {
-          firestoreCoupons.push({ id: docSnap.id, ...(docSnap.data() as any) });
-        });
-        return includeInactive ? firestoreCoupons : firestoreCoupons.filter((c) => c.isActive);
-      }
-    } catch (e) {
-      console.warn('Firestore coupons fetch failed, using memory store:', e);
-    }
-  }
-
+  await ensureLoaded();
   return includeInactive ? activeCoupons : activeCoupons.filter((c) => c.isActive);
 }
 
@@ -69,99 +101,90 @@ export async function getCoupons(includeInactive = false): Promise<Coupon[]> {
  * Find coupon by uppercase code
  */
 export async function findCouponByCode(code: string): Promise<Coupon | null> {
-  const clean = code.trim().toUpperCase();
-  const coupons = await getCoupons(true);
-  return coupons.find((c) => c.code.toUpperCase() === clean) || null;
+  await ensureLoaded();
+  const normalized = code.trim().toUpperCase();
+  const c = activeCoupons.find((item) => item.code.toUpperCase() === normalized && item.isActive);
+  return c || null;
 }
 
 /**
- * Validate coupon against subtotal
+ * Validate coupon against order subtotal
  */
 export async function validateCoupon(
   code: string,
   subtotal: number
-): Promise<{
-  valid: boolean;
-  coupon?: Coupon;
-  discountAmount?: number;
-  message: string;
-}> {
+): Promise<{ valid: boolean; coupon?: Coupon; discountAmount?: number; error?: string }> {
+  await ensureLoaded();
   const coupon = await findCouponByCode(code);
-
   if (!coupon) {
-    return { valid: false, message: 'Invalid promo code' };
+    return { valid: false, error: 'Invalid or inactive coupon code' };
   }
 
-  if (!coupon.isActive) {
-    return { valid: false, message: 'This promo code is no longer active' };
-  }
-
+  // Check expiry
   if (coupon.expiryDate && new Date(coupon.expiryDate) < new Date()) {
-    return { valid: false, message: 'This promo code has expired' };
+    return { valid: false, error: 'This coupon has expired' };
   }
 
+  // Check usage limit
   if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-    return { valid: false, message: 'This promo code has reached its usage limit' };
+    return { valid: false, error: 'This coupon usage limit has been reached' };
   }
 
+  // Check minimum order amount
   if (coupon.minOrderAmount && subtotal < coupon.minOrderAmount) {
     return {
       valid: false,
-      message: `Minimum order amount of GH₵ ${coupon.minOrderAmount} required for this promo code.`,
+      error: `Minimum order amount of GH₵ ${coupon.minOrderAmount} required for this coupon`,
     };
   }
 
-  let discountAmount = 0;
+  // Calculate discount amount
+  let discount = 0;
   if (coupon.discountType === 'percentage') {
-    discountAmount = (subtotal * coupon.discountValue) / 100;
+    discount = (subtotal * coupon.discountValue) / 100;
   } else {
-    discountAmount = coupon.discountValue;
+    discount = Math.min(coupon.discountValue, subtotal);
   }
 
   return {
     valid: true,
     coupon,
-    discountAmount: Math.min(discountAmount, subtotal),
-    message: `Promo code "${coupon.code}" applied successfully!`,
+    discountAmount: Math.round(discount * 100) / 100,
   };
+}
+
+/**
+ * Increment coupon usage count after completed payment
+ */
+export async function recordCouponUsage(couponId: string): Promise<void> {
+  await ensureLoaded();
+  const c = activeCoupons.find((item) => item.id === couponId);
+  if (c) {
+    c.usedCount += 1;
+    await syncLocalFile();
+  }
 }
 
 /**
  * Add a new coupon
  */
 export async function addCoupon(couponData: Omit<Coupon, 'id' | 'usedCount'>): Promise<Coupon> {
-  const cleanCode = couponData.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
-  const id = `coup-${Date.now()}`;
-
+  await ensureLoaded();
   const newCoupon: Coupon = {
-    id,
-    code: cleanCode,
-    description: couponData.description || `Special discount code ${cleanCode}`,
-    discountType: couponData.discountType || 'percentage',
+    id: `coup-${Date.now()}`,
+    code: couponData.code.trim().toUpperCase(),
+    description: couponData.description || 'Special Jaytel Classic discount promo.',
+    discountType: couponData.discountType,
     discountValue: Number(couponData.discountValue),
-    minOrderAmount: couponData.minOrderAmount ? Number(couponData.minOrderAmount) : 0,
-    expiryDate: couponData.expiryDate || undefined,
+    minOrderAmount: couponData.minOrderAmount ? Number(couponData.minOrderAmount) : undefined,
+    expiryDate: couponData.expiryDate,
     usageLimit: couponData.usageLimit ? Number(couponData.usageLimit) : undefined,
     usedCount: 0,
-    isActive: couponData.isActive ?? true,
+    isActive: couponData.isActive !== false,
   };
 
-  // Remove existing if matching code exists
-  const existingIdx = activeCoupons.findIndex((c) => c.code.toUpperCase() === cleanCode);
-  if (existingIdx >= 0) {
-    activeCoupons[existingIdx] = newCoupon;
-  } else {
-    activeCoupons.unshift(newCoupon);
-  }
-
-  if (isFirebaseConfigured && db) {
-    try {
-      await setDoc(doc(db, 'coupons', id), newCoupon);
-    } catch (e) {
-      console.warn('Firestore set coupon failed:', e);
-    }
-  }
-
+  activeCoupons.unshift(newCoupon);
+  await syncLocalFile();
   return newCoupon;
 }
 
@@ -169,42 +192,30 @@ export async function addCoupon(couponData: Omit<Coupon, 'id' | 'usedCount'>): P
  * Update an existing coupon
  */
 export async function updateCoupon(id: string, updates: Partial<Coupon>): Promise<Coupon | null> {
-  const index = activeCoupons.findIndex((c) => c.id === id || c.code === id);
+  await ensureLoaded();
+  const index = activeCoupons.findIndex((c) => c.id === id);
   if (index === -1) return null;
 
   activeCoupons[index] = {
     ...activeCoupons[index],
     ...updates,
+    id,
+    code: updates.code ? updates.code.trim().toUpperCase() : activeCoupons[index].code,
   };
 
-  if (isFirebaseConfigured && db) {
-    try {
-      await updateDoc(doc(db, 'coupons', activeCoupons[index].id || id), updates as any);
-    } catch (e) {
-      console.warn('Firestore update coupon failed:', e);
-    }
-  }
-
+  await syncLocalFile();
   return activeCoupons[index];
 }
 
 /**
- * Delete coupon
+ * Delete a coupon
  */
 export async function deleteCoupon(id: string): Promise<boolean> {
-  const index = activeCoupons.findIndex((c) => c.id === id || c.code === id);
+  await ensureLoaded();
+  const index = activeCoupons.findIndex((c) => c.id === id);
   if (index === -1) return false;
 
-  const realId = activeCoupons[index].id || id;
   activeCoupons.splice(index, 1);
-
-  if (isFirebaseConfigured && db) {
-    try {
-      await deleteDoc(doc(db, 'coupons', realId));
-    } catch (e) {
-      console.warn('Firestore delete coupon failed:', e);
-    }
-  }
-
+  await syncLocalFile();
   return true;
 }

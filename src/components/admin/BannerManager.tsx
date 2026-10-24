@@ -90,7 +90,7 @@ export default function BannerManager() {
   // Fetch banners
   const fetchBanners = async () => {
     try {
-      const res = await fetch('/api/admin/banners');
+      const res = await fetch('/api/admin/banners', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.banners)) {
@@ -197,6 +197,7 @@ export default function BannerManager() {
       if (isEditing && editingId) {
         const res = await fetch('/api/admin/banners', {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id: editingId, ...bannerPayload }),
         });
@@ -212,6 +213,7 @@ export default function BannerManager() {
       } else {
         const res = await fetch('/api/admin/banners', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(bannerPayload),
         });
@@ -238,6 +240,7 @@ export default function BannerManager() {
     try {
       const res = await fetch(`/api/admin/banners?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.success) {
@@ -255,6 +258,7 @@ export default function BannerManager() {
     try {
       const res = await fetch('/api/admin/banners', {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: banner.id, isActive: newStatus }),
       });
@@ -361,6 +365,7 @@ export default function BannerManager() {
                       src={b.featuredCard.image}
                       alt={b.title}
                       fill
+                      unoptimized
                       className="object-cover opacity-80"
                     />
                   )}

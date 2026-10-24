@@ -94,6 +94,7 @@ export default function CategoryManager({ onCategoriesChange }: CategoryManagerP
       if (isEditing && editingId) {
         const res = await fetch('/api/admin/categories', {
           method: 'PATCH',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             id: editingId,
@@ -120,6 +121,7 @@ export default function CategoryManager({ onCategoriesChange }: CategoryManagerP
       } else {
         const res = await fetch('/api/admin/categories', {
           method: 'POST',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: name.trim(),
@@ -157,6 +159,7 @@ export default function CategoryManager({ onCategoriesChange }: CategoryManagerP
     try {
       const res = await fetch(`/api/admin/categories?id=${encodeURIComponent(id)}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       const data = await res.json();
       if (data.success) {
@@ -178,6 +181,7 @@ export default function CategoryManager({ onCategoriesChange }: CategoryManagerP
     try {
       const res = await fetch('/api/admin/categories', {
         method: 'PATCH',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: cat.id,
@@ -243,6 +247,7 @@ export default function CategoryManager({ onCategoriesChange }: CategoryManagerP
                   src={cat.image || 'https://images.unsplash.com/photo-1584917865442-de89df76afd3?auto=format&fit=crop&w=800&q=80'}
                   alt={cat.name}
                   fill
+                  unoptimized
                   className="object-cover"
                 />
                 <div className="absolute top-2 right-2 flex items-center gap-1">

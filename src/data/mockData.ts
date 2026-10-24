@@ -332,7 +332,7 @@ export const mockProducts: Product[] = [
     bestSeller: false,
     isNewArrival: true,
     images: [
-      'https://images.unsplash.com/photo-1528458876885-54424332497b?auto=format&fit=crop&w=800&q=80',
+      'https://images.unsplash.com/photo-1517677208171-0bc6725a3e60?auto=format&fit=crop&w=800&q=80',
     ],
     specifications: {
       Spools: '32 vibrant all-purpose sewing thread spools',

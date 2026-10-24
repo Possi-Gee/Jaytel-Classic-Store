@@ -3,14 +3,17 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowRight, Sparkles, Heart, Gift, CheckCircle2, Crown, Gem, ShoppingBag, Truck } from 'lucide-react';
 import ProductCard from '@/components/product/ProductCard';
-import { mockCategories, mockProducts } from '@/data/mockData';
+import { getProducts } from '@/lib/products/productStore';
 
 import HeroCarousel from '@/components/home/HeroCarousel';
 import CategoryGrid from '@/components/home/CategoryGrid';
 
-export default function HomePage() {
-  const bestSellers = mockProducts.filter((p) => p.bestSeller);
-  const newArrivals = mockProducts.filter((p) => p.isNewArrival);
+export const dynamic = 'force-dynamic';
+
+export default async function HomePage() {
+  const allProducts = await getProducts();
+  const bestSellers = allProducts.filter((p) => p.bestSeller);
+  const newArrivals = allProducts.filter((p) => p.isNewArrival);
 
   return (
     <div className="space-y-10 sm:space-y-16">

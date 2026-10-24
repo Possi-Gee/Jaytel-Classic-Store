@@ -9,6 +9,8 @@ import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '@/context/AuthContext';
 
+import AnnouncementBar from '@/components/layout/AnnouncementBar';
+
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
@@ -71,13 +73,8 @@ export default function Header() {
         </div>
       )}
 
-      {/* Top Girlish Announcement Bar */}
-      <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-pink-500 text-white text-[11px] sm:text-xs py-1.5 px-4 text-center font-bold tracking-wide shadow-xs flex items-center justify-center gap-1.5">
-        <Sparkles className="w-3.5 h-3.5 text-pink-200 animate-pulse" />
-        <span>Jaytel Classic Store • Home of Quality and Affordable • Call / WhatsApp: 0243484468 / 0507080720 • Code </span>
-        <span className="underline decoration-pink-200 font-black">PINKGLAM</span>
-        <Sparkles className="w-3.5 h-3.5 text-pink-200 animate-pulse" />
-      </div>
+      {/* Sliding Top Announcement Bar (slides down every 5 mins, stays 10s, removable) */}
+      <AnnouncementBar />
 
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-md border-b border-pink-100 shadow-soft transition-all">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

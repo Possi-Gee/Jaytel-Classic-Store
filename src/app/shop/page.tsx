@@ -32,7 +32,7 @@ function ShopContent() {
       try {
         const [catRes, prodRes] = await Promise.all([
           fetch('/api/categories'),
-          fetch('/api/admin/products'),
+          fetch('/api/products'),
         ]);
 
         if (catRes.ok) {
@@ -60,7 +60,12 @@ function ShopContent() {
     return products
       .filter((product) => {
         if (selectedCategory !== 'all') {
-          const catObj = categories.find((c) => c.slug === selectedCategory);
+          const catObj = categories.find(
+            (c) =>
+              c.slug === selectedCategory ||
+              c.id === selectedCategory ||
+              c.name.toLowerCase() === selectedCategory.toLowerCase()
+          );
           if (catObj) {
             const matchesId = product.categoryId === catObj.id;
             const matchesName = product.category?.toLowerCase() === catObj.name.toLowerCase();
@@ -68,6 +73,9 @@ function ShopContent() {
             if (!matchesId && !matchesName && !matchesSlug) {
               return false;
             }
+          } else {
+            const matchesDirect = product.category?.toLowerCase() === selectedCategory.toLowerCase();
+            if (!matchesDirect) return false;
           }
         }
 
